@@ -1,0 +1,25 @@
+# 秘密情報・環境変数
+.env
+.env.*
+!.env.example
+
+# Python / Django
+__pycache__/
+*.pyc
+.venv/
+db.sqlite3
+media/
+
+# Node / Nuxt
+node_modules/
+.nuxt/
+.output/
+dist/
+
+# Docker / DB
+mysql_data/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
