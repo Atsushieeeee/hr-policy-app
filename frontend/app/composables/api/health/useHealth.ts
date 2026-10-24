@@ -5,14 +5,14 @@ export type HealthResponse = {
   db: 'ok' | 'error'
 }
 
-export function useHealth() {
+export const useHealth = () => {
   const { request } = useApi()
 
   const health = ref<HealthResponse | null>(null)
   const error = ref<string | null>(null)
   const loading = ref(false)
 
-  async function check() {
+  const check = async () => {
     loading.value = true
     error.value = null
     try {
