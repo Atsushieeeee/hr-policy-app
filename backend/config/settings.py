@@ -17,6 +17,7 @@ ALLOWED_HOSTS = [h for h in os.environ.get("DJANGO_ALLOWED_HOSTS", "").split(","
 INSTALLED_APPS = [
     "rest_framework",
     "core",
+    "chat",
 ]
 
 MIDDLEWARE = [
@@ -53,3 +54,9 @@ USE_I18N = True
 USE_TZ = True
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# AI（RAG）
+RAG_BACKEND = os.environ.get("RAG_BACKEND", "gemini")  # gemini / fake
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.5-flash-lite")
+GEMINI_TIMEOUT_SEC = int(os.environ.get("GEMINI_TIMEOUT_SEC", "30"))

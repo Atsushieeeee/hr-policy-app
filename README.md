@@ -21,6 +21,8 @@
 ```bash
 # 1. 環境変数ファイルを作成（値は必要に応じて編集）
 cp .env.example .env
+#    チャットを試す場合は、.env の GEMINI_API_KEY に Gemini の APIキーを設定する
+#    （Google AI Studio https://aistudio.google.com で無料枠のキーを発行できます）
 
 # 2. 起動（初回はイメージのビルドが入るため数分かかります）
 docker compose up -d --build
@@ -30,8 +32,14 @@ curl http://127.0.0.1:8000/healthz
 # => {"status":"ok","db":"ok"}
 
 # 4. ブラウザで画面を開く
-#    http://127.0.0.1:3000 （バックエンドとDBの接続状態が表示されます）
+#    http://127.0.0.1:3000       バックエンドとDBの接続状態
+#    http://127.0.0.1:3000/chat  チャット画面（就業規則への質問）
 ```
+
+### AIについて
+- 現在は、固定のダミー就業規則（`backend/rag/data/dummy_policy.txt`、架空の会社）に基づいて回答します。規程のアップロード機能は今後追加します。
+- 使用するモデルは `.env` の `GEMINI_MODEL` で変更できます。無料枠では、モデルによって混雑や提供終了で失敗することがあります。
+- APIキーなしで画面を確認したい場合は、`.env` の `RAG_BACKEND=fake` にすると、AIを呼ばず固定の回答を返します。
 
 ### 停止
 ```bash
