@@ -23,5 +23,18 @@ services:
       start_period: 30s
     restart: unless-stopped
 
+  backend:
+    build: ./backend
+    env_file: .env
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      # 開発中はソースをマウントして、変更を即時反映（runserverの自動リロード）
+      - ./backend:/app
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
 volumes:
   mysql_data:

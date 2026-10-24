@@ -14,4 +14,39 @@
 
 ## 起動方法
 
-TODO（フェーズ0完了時に記載）
+### 前提
+- Docker / Docker Compose（Docker Desktop など）がインストールされ、起動していること
+
+### 手順
+```bash
+# 1. 環境変数ファイルを作成（値は必要に応じて編集）
+cp .env.example .env
+
+# 2. 起動（初回はイメージのビルドが入るため数分かかります）
+docker compose up -d --build
+
+# 3. 動作確認
+curl http://127.0.0.1:8000/healthz
+# => {"status":"ok","db":"ok"}
+```
+
+### 停止
+```bash
+docker compose down        # コンテナを停止・削除（DBのデータは残る）
+docker compose down -v     # DBのデータも含めて削除
+```
+
+### サービスとポート
+| サービス | 内容 | ホスト側のアドレス |
+|---|---|---|
+| backend | Django（開発サーバー） | http://127.0.0.1:8000 |
+| db | MySQL 8.0 | 127.0.0.1:3307（DBクライアントからの接続用） |
+
+- ポートはすべて `127.0.0.1` にのみ公開しています。ホストにMySQLが入っていても競合しないよう、DBは3307にしています（`.env` の `DB_HOST_PORT` で変更可）。
+- `backend` はソースをマウントしているため、コードを変更すると自動で反映されます。
+- フロントエンド（Nuxt）は今後追加します。
+
+### ログの確認
+```bash
+docker compose logs -f backend
+```
