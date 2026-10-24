@@ -36,5 +36,19 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  frontend:
+    build: ./frontend
+    environment:
+      API_PROXY_TARGET: http://backend:8000
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - ./frontend:/app
+      # ホストのnode_modulesで上書きされないよう、コンテナ内のものを使う
+      - /app/node_modules
+    depends_on:
+      - backend
+    restart: unless-stopped
+
 volumes:
   mysql_data:

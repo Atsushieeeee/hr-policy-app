@@ -6,7 +6,7 @@
 
 ## 技術スタック
 
-- フロントエンド: Nuxt / Vue / Vuetify
+- フロントエンド: Nuxt 4 / Vue 3 / Vuetify 3（TypeScript、SPAモード）
 - バックエンド: Django / Django REST Framework
 - DB: MySQL
 - AI: Gemini API（検証）→ さくらのAI Engine（移行予定）
@@ -28,6 +28,9 @@ docker compose up -d --build
 # 3. 動作確認
 curl http://127.0.0.1:8000/healthz
 # => {"status":"ok","db":"ok"}
+
+# 4. ブラウザで画面を開く
+#    http://127.0.0.1:3000 （バックエンドとDBの接続状態が表示されます）
 ```
 
 ### 停止
@@ -39,14 +42,15 @@ docker compose down -v     # DBのデータも含めて削除
 ### サービスとポート
 | サービス | 内容 | ホスト側のアドレス |
 |---|---|---|
+| frontend | Nuxt（開発サーバー） | http://127.0.0.1:3000 |
 | backend | Django（開発サーバー） | http://127.0.0.1:8000 |
 | db | MySQL 8.0 | 127.0.0.1:3307（DBクライアントからの接続用） |
 
 - ポートはすべて `127.0.0.1` にのみ公開しています。ホストにMySQLが入っていても競合しないよう、DBは3307にしています（`.env` の `DB_HOST_PORT` で変更可）。
-- `backend` はソースをマウントしているため、コードを変更すると自動で反映されます。
-- フロントエンド（Nuxt）は今後追加します。
+- `frontend` と `backend` はソースをマウントしているため、コードを変更すると自動で反映されます。
+- ブラウザからのAPI呼び出しは、同一オリジンの `/api/v1/*` に送り、Nuxtがバックエンドへ中継します（CORS設定が不要）。
 
 ### ログの確認
 ```bash
-docker compose logs -f backend
+docker compose logs -f backend   # frontend も同様
 ```
