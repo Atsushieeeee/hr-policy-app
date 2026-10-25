@@ -1,5 +1,15 @@
 # docker compose up -d で起動している状態で実行する
-.PHONY: lint-backend fmt-backend test-backend lint-frontend fmt-frontend typecheck-frontend
+.PHONY: migrate seed setup lint-backend fmt-backend test-backend lint-frontend fmt-frontend typecheck-frontend
+
+migrate:
+	docker compose exec backend python manage.py migrate
+
+# デモ用のユーザーを作成する（.env の DEMO_PASSWORD を使用）
+seed:
+	docker compose exec backend python manage.py seed_demo
+
+# 初回用: マイグレーションとデモユーザーの作成
+setup: migrate seed
 
 lint-backend:
 	docker compose exec backend ruff check .

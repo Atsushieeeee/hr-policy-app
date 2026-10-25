@@ -12,10 +12,11 @@ SECRET_KEY = os.environ["DJANGO_SECRET_KEY"]
 DEBUG = env_bool("DJANGO_DEBUG", False)
 ALLOWED_HOSTS = [h for h in os.environ.get("DJANGO_ALLOWED_HOSTS", "").split(",") if h]
 
-# django.contrib.auth などは、カスタムUserモデルを用意するフェーズ1で追加する。
-# （最初のmigrate前にUserモデルを確定させる必要があるため、ここでは入れない）
 INSTALLED_APPS = [
+    "django.contrib.contenttypes",
+    "django.contrib.auth",
     "rest_framework",
+    "accounts",
     "core",
     "chat",
 ]
@@ -23,6 +24,17 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.middleware.common.CommonMiddleware",
+]
+
+AUTH_USER_MODEL = "accounts.User"
+
+AUTH_PASSWORD_VALIDATORS = [
+    {
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
+        "OPTIONS": {"min_length": 12},
+    },
+    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
+    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -60,3 +72,6 @@ RAG_BACKEND = os.environ.get("RAG_BACKEND", "gemini")  # gemini / fake
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.5-flash-lite")
 GEMINI_TIMEOUT_SEC = int(os.environ.get("GEMINI_TIMEOUT_SEC", "30"))
+
+# デモ用ユーザーの共通パスワード（seed_demo で使用）
+DEMO_PASSWORD = os.environ.get("DEMO_PASSWORD", "")
