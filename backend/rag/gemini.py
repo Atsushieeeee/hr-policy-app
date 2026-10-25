@@ -1,7 +1,6 @@
 import logging
 from pathlib import Path
 
-from django.conf import settings
 from google import genai
 from google.genai import errors, types
 from pydantic import BaseModel
@@ -52,7 +51,9 @@ class GeminiClient:
                 ),
             )
         except errors.APIError as e:
-            logger.error("Gemini API error: code=%s status=%s message=%s", e.code, e.status, e.message)
+            logger.error(
+                "Gemini API error: code=%s status=%s message=%s", e.code, e.status, e.message
+            )
             if e.code == 429:
                 raise RagError(
                     "AIの利用が混み合っています。しばらくしてからもう一度お試しください。",

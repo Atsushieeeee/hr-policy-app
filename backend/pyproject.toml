@@ -1,0 +1,21 @@
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["**/migrations"]
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle（エラー）
+    "F",  # pyflakes
+    "I",  # import の並び順
+    "UP", # 新しい構文への移行
+    "B",  # バグの温床になりやすい書き方
+]
+
+[tool.ruff.lint.per-file-ignores]
+# プロンプトは文章のため、行の長さを制限しない
+"rag/prompts.py" = ["E501"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings"
+python_files = ["test_*.py"]

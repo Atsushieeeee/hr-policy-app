@@ -58,6 +58,17 @@ docker compose down -v     # DBのデータも含めて削除
 - `frontend` と `backend` はソースをマウントしているため、コードを変更すると自動で反映されます。
 - ブラウザからのAPI呼び出しは、同一オリジンの `/api/v1/*` に送り、Nuxtがバックエンドへ中継します（CORS設定が不要）。
 
+### 開発（Lint・テスト）
+`docker compose up -d` で起動している状態で、次のコマンドを実行します。
+
+```bash
+make lint-backend   # ruff（Lint・フォーマット確認）
+make fmt-backend    # ruff（自動修正・整形）
+make test-backend   # pytest（テスト用DBを作成するため、rootで接続）
+```
+
+- バックエンドの変更は、PR 作成時に GitHub Actions（`.github/workflows/backend.yml`）で、同じ内容が自動で検査されます。
+
 ### ログの確認
 ```bash
 docker compose logs -f backend   # frontend も同様

@@ -1,0 +1,67 @@
+name: Backend
+
+on:
+  pull_request:
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend.yml"
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend.yml"
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    services:
+      db:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: ci-password
+          MYSQL_DATABASE: hr_policy
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -pci-password --silent"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+
+    env:
+      DJANGO_SECRET_KEY: ci-secret-key
+      MYSQL_DATABASE: hr_policy
+      # テスト用DBの作成権限が必要なため、CIではrootで接続する
+      MYSQL_USER: root
+      MYSQL_PASSWORD: ci-password
+      MYSQL_HOST: 127.0.0.1
+      MYSQL_PORT: 3306
+      RAG_BACKEND: fake
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements*.txt
+
+      - name: mysqlclient のビルドに必要なパッケージを入れる
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends pkg-config default-libmysqlclient-dev
+
+      - name: 依存パッケージをインストール
+        run: pip install -r requirements-dev.txt
+
+      - name: Lint（ruff）
+        run: ruff check .
+
+      - name: フォーマット確認（ruff）
+        run: ruff format --check .
+
+      - name: テスト（pytest）
+        run: pytest
