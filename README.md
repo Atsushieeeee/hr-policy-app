@@ -27,14 +27,37 @@ cp .env.example .env
 # 2. 起動（初回はイメージのビルドが入るため数分かかります）
 docker compose up -d --build
 
-# 3. 動作確認
+# 3. DBのマイグレーションと、デモユーザーの作成（初回のみ）
+make setup
+
+# 4. 動作確認
 curl http://127.0.0.1:8000/healthz
 # => {"status":"ok","db":"ok"}
 
-# 4. ブラウザで画面を開く
+# 5. ブラウザで画面を開く
 #    http://127.0.0.1:3000       バックエンドとDBの接続状態
 #    http://127.0.0.1:3000/chat  チャット画面（就業規則への質問）
 ```
+
+### ユーザーについて
+- ユーザーの登録画面はありません。コマンドで作成します（`docker compose up -d` で起動している状態で実行）。
+
+```bash
+make migrate    # マイグレーションを適用
+make seed       # デモユーザーを作成（.env の DEMO_PASSWORD がパスワード）
+docker compose exec backend python manage.py create_user --email a@example.com --name 名前 [--admin]
+docker compose exec backend python manage.py set_password --email a@example.com
+```
+
+- 新しいマイグレーションを含む変更を取り込んだ（`git pull` した）ときは、`make migrate` を実行してください。
+- `create_user` と `set_password` は、`--password` を省略すると画面で入力を求めます（パスワードは12文字以上）。
+
+デモユーザー（`make seed`）:
+
+| メールアドレス | 権限 |
+|---|---|
+| admin@example.com | 管理者 |
+| employee1@example.com 〜 employee3@example.com | 社員 |
 
 ### AIについて
 - 現在は、固定のダミー就業規則（`backend/rag/data/dummy_policy.txt`、架空の会社）に基づいて回答します。規程のアップロード機能は今後追加します。
