@@ -7,7 +7,10 @@
     "build": "nuxt build",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "postinstall": "nuxt prepare"
+    "postinstall": "nuxt prepare",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "typecheck": "nuxt typecheck"
   },
   "dependencies": {
     "@mdi/font": "^7.4.47",
@@ -17,7 +20,11 @@
     "vuetify": "^3.13.7"
   },
   "devDependencies": {
+    "@nuxt/eslint": "^1.17.0",
+    "@types/node": "^22.20.5",
+    "eslint": "^10.13.0",
     "typescript": "~5.9.3",
-    "vite-plugin-vuetify": "^2.1.3"
+    "vite-plugin-vuetify": "^2.1.3",
+    "vue-tsc": "^3.3.13"
   }
 }

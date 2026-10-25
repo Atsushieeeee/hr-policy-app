@@ -65,9 +65,14 @@ docker compose down -v     # DBのデータも含めて削除
 make lint-backend   # ruff（Lint・フォーマット確認）
 make fmt-backend    # ruff（自動修正・整形）
 make test-backend   # pytest（テスト用DBを作成するため、rootで接続）
+
+make lint-frontend       # ESLint（関数はアロー関数に統一）
+make fmt-frontend        # ESLint（自動修正）
+make typecheck-frontend  # 型チェック（vue-tsc）
 ```
 
-- バックエンドの変更は、PR 作成時に GitHub Actions（`.github/workflows/backend.yml`）で、同じ内容が自動で検査されます。
+- 変更は、PR 作成時に GitHub Actions（`backend.yml` / `frontend.yml`）で、同じ内容が自動で検査されます。
+- フロントの依存パッケージ（`package.json`）を変更したときは、`docker compose up -d --build -V` で起動し直してください。`node_modules` はコンテナ内の保存領域に残るため、`-V` を付けないと古いまま使われます。
 
 ### ログの確認
 ```bash
