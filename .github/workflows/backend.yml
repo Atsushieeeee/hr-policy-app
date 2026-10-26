@@ -33,7 +33,7 @@ jobs:
           --health-retries=20
 
     env:
-      DJANGO_SECRET_KEY: ci-secret-key
+      DJANGO_SECRET_KEY: ci-secret-key-for-testing-only-0123456789
       MYSQL_DATABASE: hr_policy
       # テスト用DBの作成権限が必要なため、CIではrootで接続する
       MYSQL_USER: root
