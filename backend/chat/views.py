@@ -1,4 +1,5 @@
 from rest_framework import serializers, status
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -17,7 +18,9 @@ def error_response(code: str, message: str, http_status: int) -> Response:
 
 
 class ChatMessageView(APIView):
-    """質問を受け取り、就業規則に基づく回答を返す。"""
+    """質問を受け取り、就業規則に基づく回答を返す。ログイン済みなら、管理者権限の有無に関わらず使える。"""
+
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
         serializer = QuestionSerializer(data=request.data)
