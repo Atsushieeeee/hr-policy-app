@@ -2,7 +2,7 @@
 
 就業規則のPDFを管理者がアップロードし、社員がチャット形式で質問すると、就業規則の記載内容に基づいてAIが回答するWebアプリ。
 
-> 開発中（準備段階）。起動手順・画面・デモアカウントは今後追記します。
+> 開発中です。実装済みの範囲は、下の「実装状況」を参照してください。
 
 ## 技術スタック
 
@@ -11,6 +11,166 @@
 - DB: MySQL
 - AI: Gemini API（検証）→ さくらのAI Engine（移行予定）
 - 環境: Docker / Docker Compose
+
+## 実装状況
+
+| 機能 | 状況 |
+|---|---|
+| ログイン・ログアウト、権限（管理者権限の有無）、レート制限 | 実装済み |
+| チャット（Gemini、根拠つきの回答。規程は、固定のダミー規程） | 実装済み |
+| 規程PDFのアップロード（常に全文を置き換え） | 予定（フェーズ2） |
+| 管理者権限の付与・解除 | 予定（フェーズ2） |
+| 会話の文脈、チャットの履歴の保存 | 予定（フェーズ3） |
+| FAQ（質問ログからの候補、公開、AIを呼ばない回答） | 予定（フェーズ4） |
+| さくらのAI Engineへの移行 | 予定（フェーズ5） |
+
+## 設計
+
+以下の図は、目指している全体の設計です。実装済みの範囲は、上の「実装状況」を参照してください。
+
+### システム構成
+
+```mermaid
+flowchart LR
+    user["ブラウザ"]
+    subgraph compose["Docker Compose（ローカル）"]
+        front["frontend<br/>Nuxt 4 / Vuetify<br/>:3000"]
+        back["backend<br/>Django REST Framework<br/>:8000"]
+        db[("db<br/>MySQL 8.0")]
+    end
+    ai["Gemini API<br/>（後で さくらのAI Engine に移行）"]
+
+    user -->|"画面 / API（/api/v1/*）"| front
+    front -->|"/api/* を中継"| back
+    back --> db
+    back -->|"規程の全文 + 質問"| ai
+```
+
+### ユーザーシナリオ
+
+```mermaid
+flowchart TD
+    login["ログイン"] --> chat["チャット画面"]
+    chat --> q{"質問する"}
+    q -->|"よくある質問から選ぶ"| faq["保存済みの回答を表示<br/>（AIを呼ばない）"]
+    q -->|"自由に入力する"| ai["AIが規程から回答<br/>回答 + 根拠（条・ページ）"]
+    ai -->|"規程に記載がない"| none["「見つかりませんでした」<br/>人事担当へ確認を案内"]
+
+    chat -.->|"管理者権限あり"| admin["管理者画面"]
+    admin --> up["規程PDFをアップロード<br/>（常に全文を置き換え）"]
+    admin --> perm["管理者権限を付与・解除"]
+    admin --> cand["質問ログからFAQ候補を確認"]
+    cand --> pub["内容を確認してFAQを公開"]
+    pub -.->|"チャット画面のFAQ一覧に反映"| faq
+```
+
+<details>
+<summary>チャットの処理の流れ（シーケンス図）</summary>
+
+質問1件が、どのように処理されるかを示します。
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant B as ブラウザ
+    participant N as Nuxt（frontend）
+    participant D as Django（backend）
+    participant C as DBキャッシュ
+    participant G as Gemini API
+
+    B->>N: POST /api/v1/chat/messages<br/>X-Access-Token: アクセストークン
+    N->>D: 中継
+    D->>D: トークンを検証し、ユーザーをDBから取得
+    alt トークンが期限切れ（401）
+        D-->>B: 401
+        B->>D: POST /api/v1/auth/refresh（Cookie）
+        D-->>B: 新しいアクセストークン
+        B->>D: 同じリクエストをやり直す
+    end
+    D->>C: ユーザー単位の回数を確認（10回/分・200回/日）
+    D->>D: 質問を検証（1〜1000文字）
+    D->>C: AI全体の回数を確認（12回/分・450回/日）
+    D->>G: 規程の全文 + 質問（規程のみを根拠にする指示）
+    G-->>D: JSON（回答・根拠・該当なしの判定）
+    D-->>B: 回答 + 根拠（条・ページ）
+    Note over D,B: 上限を超えると 429 + Retry-After
+```
+
+</details>
+
+<details>
+<summary>データ設計（ER図）</summary>
+
+目指しているデータ設計です。実装済みなのは `User` だけで、ほかのテーブルは、次のフェーズで追加します。
+
+| テーブル | 内容 | 状況 |
+|---|---|---|
+| User | ユーザー。管理者権限（`is_admin`）の有無を持つ | 実装済み |
+| PolicyDocument | アップロードされた規程（抽出したテキストを保存） | 予定（フェーズ2） |
+| ChatSession / ChatMessage | チャットの会話と、質問・回答（根拠つき） | 予定（フェーズ3） |
+| FAQ | 公開するよくある質問と回答 | 予定（フェーズ4） |
+| AuditLog | 重要な操作の記録 | 予定（フェーズ6） |
+
+```mermaid
+erDiagram
+    User ||--o{ PolicyDocument : "アップロード"
+    User ||--o{ ChatSession : "利用"
+    ChatSession ||--o{ ChatMessage : "含む"
+    ChatMessage |o--o| FAQ : "元になる"
+    User ||--o{ FAQ : "作成"
+    User ||--o{ AuditLog : "操作"
+
+    User {
+        bigint id PK
+        string email UK
+        string name
+        bool is_admin
+        bool is_active
+        datetime created_at
+        datetime updated_at
+    }
+    PolicyDocument {
+        bigint id PK
+        string title
+        string status "processing / ready / failed"
+        text extracted_text
+        string sha256
+        bigint uploaded_by FK
+    }
+    ChatSession {
+        bigint id PK
+        bigint user_id FK
+    }
+    ChatMessage {
+        bigint id PK
+        bigint session_id FK
+        string role "user / assistant"
+        text content
+        string normalized_question
+        json sources
+        bool is_no_answer
+        string feedback
+    }
+    FAQ {
+        bigint id PK
+        string question
+        text answer
+        json sources
+        string status "draft / published / needs_review"
+        int sort_order
+        bigint source_message FK
+        bigint created_by FK
+    }
+    AuditLog {
+        bigint id PK
+        bigint actor FK
+        string action
+        string target_type
+        json detail
+    }
+```
+
+</details>
 
 ## 起動方法
 
