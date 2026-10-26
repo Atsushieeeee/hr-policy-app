@@ -59,6 +59,27 @@ docker compose exec backend python manage.py set_password --email a@example.com
 | admin@example.com | 管理者 |
 | employee1@example.com 〜 employee3@example.com | 社員 |
 
+### 認証API
+- ログインすると、アクセストークン（15分）がレスポンスで返り、リフレッシュトークン（7日）は HttpOnly の Cookie に入ります。
+- 認証が必要なAPIには、アクセストークンを `X-Access-Token` ヘッダで送ります（公開時にBasic認証を前段に置いても干渉しないよう、`Authorization` ヘッダは使いません）。
+
+| メソッド | パス | 内容 |
+|---|---|---|
+| POST | /api/v1/auth/login | ログイン（`email`、`password`） |
+| POST | /api/v1/auth/refresh | アクセストークンの再発行（Cookie使用、リフレッシュトークンも入れ替え） |
+| POST | /api/v1/auth/logout | ログアウト（リフレッシュトークンを無効化） |
+| GET | /api/v1/me | ログイン中のユーザー情報（`X-Access-Token` が必要） |
+
+```bash
+curl -c cookie.txt -X POST http://127.0.0.1:8000/api/v1/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"admin@example.com","password":"demo-password"}'
+curl http://127.0.0.1:8000/api/v1/me -H "X-Access-Token: <loginで返ったaccess>"
+```
+
+- エラーは、すべて `{ "error": { "code": "...", "message": "..." } }` の形で返ります。
+- `DJANGO_SECRET_KEY` はトークンの署名にも使うため、`DJANGO_DEBUG=false` の環境では32文字以上が必要です。
+
 ### AIについて
 - 現在は、固定のダミー就業規則（`backend/rag/data/dummy_policy.txt`、架空の会社）に基づいて回答します。規程のアップロード機能は今後追加します。
 - 使用するモデルは `.env` の `GEMINI_MODEL` で変更できます。無料枠では、モデルによって混雑や提供終了で失敗することがあります。

@@ -1,5 +1,8 @@
 import os
+from datetime import timedelta
 from pathlib import Path
+
+from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -10,12 +13,16 @@ def env_bool(name, default=False):
 
 SECRET_KEY = os.environ["DJANGO_SECRET_KEY"]
 DEBUG = env_bool("DJANGO_DEBUG", False)
+# JWTの署名にも使うため、本番では十分に長いキーを必須にする
+if not DEBUG and len(SECRET_KEY) < 32:
+    raise ImproperlyConfigured("DJANGO_SECRET_KEY は32文字以上にしてください。")
 ALLOWED_HOSTS = [h for h in os.environ.get("DJANGO_ALLOWED_HOSTS", "").split(",") if h]
 
 INSTALLED_APPS = [
     "django.contrib.contenttypes",
     "django.contrib.auth",
     "rest_framework",
+    "rest_framework_simplejwt.token_blacklist",
     "accounts",
     "core",
     "chat",
@@ -53,12 +60,24 @@ DATABASES = {
 }
 
 REST_FRAMEWORK = {
-    # 認証・権限はフェーズ1でJWTと合わせて設定する
-    "DEFAULT_AUTHENTICATION_CLASSES": [],
+    "DEFAULT_AUTHENTICATION_CLASSES": ["accounts.authentication.AccessTokenAuthentication"],
+    # 権限（IsAuthenticated など）は、APIごとに指定する
     "DEFAULT_PERMISSION_CLASSES": [],
-    "UNAUTHENTICATED_USER": None,
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
+    "EXCEPTION_HANDLER": "core.exceptions.api_exception_handler",
 }
+
+# JWT（アクセストークンは X-Access-Token ヘッダ、リフレッシュトークンは HttpOnly Cookie）
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+    "USER_ID_CLAIM": "user_id",
+}
+AUTH_REFRESH_COOKIE_NAME = "refresh_token"
+# リフレッシュトークンは、認証APIにだけ送られるようにする
+AUTH_REFRESH_COOKIE_PATH = "/api/v1/auth"
+# HTTPSで公開する環境（DEBUG=false）では Secure を付ける。ローカル（http）では付けない
+AUTH_COOKIE_SECURE = env_bool("AUTH_COOKIE_SECURE", not DEBUG)
 
 LANGUAGE_CODE = "ja"
 TIME_ZONE = "Asia/Tokyo"
