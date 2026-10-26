@@ -92,5 +92,31 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.5-flash-lite")
 GEMINI_TIMEOUT_SEC = int(os.environ.get("GEMINI_TIMEOUT_SEC", "30"))
 
+# レート制限の記録は、DBキャッシュに保存する（テーブルは、migrate で作られる）
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+        "LOCATION": "cache_table",
+        # 制限の記録が、途中で消されないよう、十分な件数を確保する
+        "OPTIONS": {"MAX_ENTRIES": 100000, "CULL_FREQUENCY": 3},
+    }
+}
+
+# レート制限（値は環境変数で変更できる）。
+# AI全体の上限は、AI側の上限（無料枠: 15回/分・500回/日）に余裕を持たせた値。
+REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"] = {
+    "login_ip": os.environ.get("THROTTLE_LOGIN_IP", "10/min"),
+    "chat_minute": os.environ.get("THROTTLE_CHAT_USER_MINUTE", "10/min"),
+    "chat_day": os.environ.get("THROTTLE_CHAT_USER_DAY", "200/day"),
+    "ai_global_minute": os.environ.get("THROTTLE_AI_GLOBAL_MINUTE", "12/min"),
+    "ai_global_day": os.environ.get("THROTTLE_AI_GLOBAL_DAY", "450/day"),
+}
+# 前段のプロキシ（Caddyなど）の段数。0 のときは X-Forwarded-For を信用せず、接続元のIPを使う
+REST_FRAMEWORK["NUM_PROXIES"] = int(os.environ.get("TRUSTED_PROXY_COUNT", "0"))
+
+# ログインの連続失敗によるロック
+LOGIN_MAX_FAILURES = int(os.environ.get("LOGIN_MAX_FAILURES", "5"))
+LOGIN_LOCK_SECONDS = int(os.environ.get("LOGIN_LOCK_SECONDS", "900"))
+
 # デモ用ユーザーの共通パスワード（seed_demo で使用）
 DEMO_PASSWORD = os.environ.get("DEMO_PASSWORD", "")
