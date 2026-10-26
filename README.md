@@ -173,6 +173,10 @@ erDiagram
 
 </details>
 
+## サンプルファイル
+
+`samples/` に、動作確認用の架空の就業規則（PDF）があります。詳しくは [samples/README.md](samples/README.md) を参照してください。
+
 ## 起動方法
 
 ### 前提
