@@ -3,6 +3,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from core.throttling import ChatUserDayThrottle, ChatUserMinuteThrottle, check_ai_budget
 from rag.base import RagError
 from rag.factory import get_rag_client
 
@@ -21,6 +22,7 @@ class ChatMessageView(APIView):
     """質問を受け取り、就業規則に基づく回答を返す。ログイン済みなら、管理者権限の有無に関わらず使える。"""
 
     permission_classes = [IsAuthenticated]
+    throttle_classes = [ChatUserMinuteThrottle, ChatUserDayThrottle]
 
     def post(self, request):
         serializer = QuestionSerializer(data=request.data)
@@ -30,6 +32,8 @@ class ChatMessageView(APIView):
                 f"質問は1〜{MAX_QUESTION_LENGTH}文字で入力してください。",
                 status.HTTP_400_BAD_REQUEST,
             )
+
+        check_ai_budget(request, self)  # AI側の上限を超える前に、こちらで止める
 
         try:
             answer = get_rag_client().answer(serializer.validated_data["question"])
