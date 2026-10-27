@@ -240,6 +240,8 @@ docker compose exec backend python manage.py set_password --email a@example.com
 | メソッド | パス | 内容 |
 |---|---|---|
 | PUT | /api/v1/admin/policy | PDFをアップロード（multipart、項目名 `file`）。受け付けると `202`（状態: 処理中）を返す |
+| GET | /api/v1/admin/policy | 現行の規程（`current`）と、処理中・直近で失敗した取り込み（`upload`）を返す。未登録でも `200`（どちらも `null`） |
+| GET | /api/v1/admin/policy/file | 現行の規程のPDFを、ブラウザ内で表示できる形（`inline`）で返す。未登録は `404`（`POLICY_NOT_FOUND`） |
 
 - 受け付けの段階で、20MB以下、PDFの先頭の署名（拡張子ではなく、ファイルの中身で判定）、現行の規程と同じファイルでないこと、処理中の規程がないこと（`409`）を確認します。
 - ワーカー（`docker compose` の `worker` サービス）が、PDFからテキストを抽出して、正規化し（部首用の文字などを、通常の文字に直す）、ページの区切り（`[p.N]`）つきで保存します。成功すると、現行の規程になり、旧規程は削除されます。失敗したときは、旧規程が残ります。

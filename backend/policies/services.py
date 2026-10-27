@@ -58,6 +58,14 @@ def current_policy():
     return PolicyDocument.objects.filter(status=PolicyDocument.Status.READY).first()
 
 
+def latest_upload():
+    """処理中、または直近で失敗した取り込み。なければ None。"""
+    expire_stale_processing()
+    return (
+        PolicyDocument.objects.exclude(status=PolicyDocument.Status.READY).order_by("-id").first()
+    )
+
+
 # ---- 受け付け（APIの中で、すぐに終わる処理）----
 
 
