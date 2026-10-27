@@ -258,6 +258,19 @@ docker compose exec backend python manage.py set_password --email a@example.com
 
 **対応していないPDF:** スキャンした画像のPDF、独自のフォントの割り当てで文字が正しく取り出せないPDF、段組みや表の読み取り順が崩れるもの。
 
+### 管理者の管理API
+
+| メソッド | パス | 内容 |
+|---|---|---|
+| GET | /api/v1/admin/admins | 管理者権限を持つ、有効なユーザーの一覧（ページング） |
+| GET | /api/v1/admin/users | 管理者権限のない、有効なユーザーの一覧（ページング。`?q=` で名前・メールを部分一致で検索） |
+| POST | /api/v1/admin/admins | `{"user_ids": [...]}` の全員に、管理者権限を付与する（`204`） |
+| POST | /api/v1/admin/admins/revoke | `{"user_ids": [...]}` の全員から、管理者権限を外す（`204`） |
+
+- ページングは、`?page=1&page_size=20`（最大100）。`{ "count", "page", "page_size", "results": [{ "id", "name", "email", "created_at" }] }` の形で返します。
+- 付与・解除は、全員成功か、全員失敗です。存在しない・無効なユーザーが含まれると `400`（`INVALID_TARGET`）です。
+- 解除では、自分自身を含むと `409`（`CANNOT_REVOKE_SELF`）、処理後に有効な管理者が0人になると `409`（`LAST_ADMIN`）です。管理者の行をロックして判定するため、同時に解除しても、0人にはなりません。
+
 ### 認証API
 - ログインすると、アクセストークン（15分）がレスポンスで返り、リフレッシュトークン（7日）は HttpOnly の Cookie に入ります。
 - 認証が必要なAPIには、アクセストークンを `X-Access-Token` ヘッダで送ります（公開時にBasic認証を前段に置いても干渉しないよう、`Authorization` ヘッダは使いません）。
