@@ -9,7 +9,7 @@ URL = "/api/v1/chat/messages"
 
 
 @pytest.fixture(autouse=True)
-def setup(settings, clock):
+def setup(settings, clock, registered_policy):
     settings.RAG_BACKEND = "fake"  # AIは呼ばない
 
 

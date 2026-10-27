@@ -32,8 +32,7 @@ class RagClient(Protocol):
     """就業規則に基づく回答を返すクライアントの共通インターフェース。
 
     実装を差し替えられるようにしている（Gemini → さくらのAI Engine）。
-    規程の登録・削除（register_policy / delete_policy）は、
-    アップロード機能を作るフェーズ2で追加する。
+    規程のテキスト（現行の規程の全文）は、質問のたびに渡す。
     """
 
-    def answer(self, question: str) -> Answer: ...
+    def answer(self, question: str, policy_text: str) -> Answer: ...

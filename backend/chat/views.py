@@ -4,6 +4,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from core.throttling import ChatUserDayThrottle, ChatUserMinuteThrottle, check_ai_budget
+from policies.exceptions import PolicyNotRegistered
+from policies.services import current_policy
 from rag.base import RagError
 from rag.factory import get_rag_client
 
@@ -33,10 +35,16 @@ class ChatMessageView(APIView):
                 status.HTTP_400_BAD_REQUEST,
             )
 
+        policy = current_policy()
+        if policy is None:
+            raise PolicyNotRegistered()  # 規程がないときは、AIを呼ばない（AIの利用枠も使わない）
+
         check_ai_budget(request, self)  # AI側の上限を超える前に、こちらで止める
 
         try:
-            answer = get_rag_client().answer(serializer.validated_data["question"])
+            answer = get_rag_client().answer(
+                serializer.validated_data["question"], policy.extracted_text
+            )
         except RagError as e:
             return error_response(e.code, e.message, e.status)
 

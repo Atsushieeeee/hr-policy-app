@@ -27,6 +27,12 @@ class UploadInProgress(CodedAPIException):
     default_detail = "別のファイルを処理中です。完了してから、もう一度アップロードしてください"
 
 
+class PolicyNotRegistered(CodedAPIException):
+    status_code = status.HTTP_409_CONFLICT
+    error_code = "POLICY_NOT_REGISTERED"
+    default_detail = "就業規則がまだ登録されていません。管理者に登録を依頼してください"
+
+
 class PolicyNotFound(CodedAPIException):
     status_code = status.HTTP_404_NOT_FOUND
     error_code = "POLICY_NOT_FOUND"
