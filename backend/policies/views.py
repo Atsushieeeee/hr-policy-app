@@ -1,3 +1,4 @@
+from django.http import FileResponse
 from rest_framework import exceptions, status
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
@@ -5,8 +6,9 @@ from rest_framework.response import Response
 from core.throttling import PolicyUploadThrottle
 from core.views import AdminAPIView
 
-from .serializers import UploadSerializer
-from .services import accept_upload
+from .exceptions import PolicyNotFound
+from .serializers import CurrentPolicySerializer, LatestUploadSerializer, UploadSerializer
+from .services import accept_upload, current_policy, latest_upload
 
 
 class PolicyView(AdminAPIView):
@@ -14,6 +16,17 @@ class PolicyView(AdminAPIView):
 
     parser_classes = [MultiPartParser]
     throttle_classes = [PolicyUploadThrottle]
+
+    def get(self, request):
+        """現行の規程と、取り込みの状況。規程が未登録でも 200 で返す。"""
+        policy = current_policy()
+        upload = latest_upload()
+        return Response(
+            {
+                "current": CurrentPolicySerializer(policy).data if policy else None,
+                "upload": LatestUploadSerializer(upload).data if upload else None,
+            }
+        )
 
     def put(self, request):
         uploaded_file = request.FILES.get("file")
@@ -23,3 +36,18 @@ class PolicyView(AdminAPIView):
         policy = accept_upload(uploaded_file, request.user)
         # 取り込みは、ワーカーが行う。ここでは、受け付けたことだけを返す
         return Response(UploadSerializer(policy).data, status=status.HTTP_202_ACCEPTED)
+
+
+class PolicyFileView(AdminAPIView):
+    """現行の規程のPDF。ブラウザ内で表示できる形で返す。"""
+
+    def get(self, request):
+        policy = current_policy()
+        if policy is None:
+            raise PolicyNotFound()
+        return FileResponse(
+            policy.file.open("rb"),
+            content_type="application/pdf",
+            as_attachment=False,
+            filename=policy.original_filename,
+        )
