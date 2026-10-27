@@ -1,10 +1,12 @@
 from django.urls import include, path
 
 from core.views import AdminPingView
+from policies.views import PolicyView
 
 # /api/v1/admin/ 配下の管理者用API。ここに登録したものは、権限のテストが自動で検証する
 admin_urlpatterns = [
     path("ping", AdminPingView.as_view(), name="admin-ping"),
+    path("policy", PolicyView.as_view(), name="admin-policy"),
 ]
 
 urlpatterns = [

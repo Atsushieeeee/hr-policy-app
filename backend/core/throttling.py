@@ -27,6 +27,17 @@ class ChatUserDayThrottle(_ChatUserThrottle):
     scope = "chat_day"
 
 
+class PolicyUploadThrottle(SimpleRateThrottle):
+    """規程のアップロードの回数を、管理者ごとに制限する。"""
+
+    scope = "policy_upload"
+
+    def get_cache_key(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            return None
+        return self.cache_format % {"scope": self.scope, "ident": request.user.pk}
+
+
 class _AiGlobalThrottle(SimpleRateThrottle):
     """AI呼び出し全体（全ユーザー合計）の制限。AI側の上限を超える前に、こちらで止める。"""
 
