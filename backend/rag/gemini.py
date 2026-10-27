@@ -1,5 +1,4 @@
 import logging
-from pathlib import Path
 
 from google import genai
 from google.genai import errors, types
@@ -9,8 +8,6 @@ from .base import Answer, RagError, Source
 from .prompts import NOT_FOUND_MESSAGE, SYSTEM_PROMPT, build_user_content
 
 logger = logging.getLogger(__name__)
-
-DUMMY_POLICY_PATH = Path(__file__).parent / "data" / "dummy_policy.txt"
 
 
 class _SourceSchema(BaseModel):
@@ -25,10 +22,7 @@ class _AnswerSchema(BaseModel):
 
 
 class GeminiClient:
-    """規程の全文をプロンプトに含めて回答させる実装（全文コンテキスト方式）。
-
-    フェーズ0では、固定のダミー規程を使う。規程のアップロード機能（フェーズ2）で、DBの抽出テキストに置き換える。
-    """
+    """規程の全文をプロンプトに含めて回答させる実装（全文コンテキスト方式）。"""
 
     def __init__(self, api_key: str, model: str, timeout_sec: int):
         self._client = genai.Client(
@@ -36,13 +30,12 @@ class GeminiClient:
             http_options=types.HttpOptions(timeout=timeout_sec * 1000),
         )
         self._model = model
-        self._policy_text = DUMMY_POLICY_PATH.read_text(encoding="utf-8")
 
-    def answer(self, question: str) -> Answer:
+    def answer(self, question: str, policy_text: str) -> Answer:
         try:
             response = self._client.models.generate_content(
                 model=self._model,
-                contents=build_user_content(self._policy_text, question),
+                contents=build_user_content(policy_text, question),
                 config=types.GenerateContentConfig(
                     system_instruction=SYSTEM_PROMPT,
                     response_mime_type="application/json",

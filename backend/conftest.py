@@ -49,6 +49,28 @@ def media_root(settings, tmp_path):
 
 
 @pytest.fixture
+def registered_policy(db):
+    """現行の規程が登録されている状態にする（PDFの取り込みを通さず、直接作る）。"""
+    from accounts.models import User
+    from policies.models import PolicyDocument
+
+    admin = User.objects.create_user(
+        email="policy-admin@example.com", name="管理者", password="x", is_admin=True
+    )
+    return PolicyDocument.objects.create(
+        title="就業規則",
+        original_filename="policy.pdf",
+        file="policies/dummy.pdf",
+        file_size=1,
+        sha256="0" * 64,
+        page_count=1,
+        status=PolicyDocument.Status.READY,
+        extracted_text="[p.1]\n第1条 テスト用の規程",
+        uploaded_by=admin,
+    )
+
+
+@pytest.fixture
 def samples(settings):
     """サンプルのPDFがあるフォルダ（リポジトリの samples/）。"""
     return Path(settings.BASE_DIR).parent / "samples"

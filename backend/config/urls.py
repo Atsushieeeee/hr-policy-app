@@ -1,7 +1,7 @@
 from django.urls import include, path
 
 from core.views import AdminPingView
-from policies.views import PolicyFileView, PolicyView
+from policies.views import PolicyFileView, PolicyStatusView, PolicyView
 
 # /api/v1/admin/ 配下の管理者用API。ここに登録したものは、権限のテストが自動で検証する
 admin_urlpatterns = [
@@ -17,5 +17,6 @@ urlpatterns = [
     path("api/v1/", include("core.urls")),
     path("api/v1/", include("chat.urls")),
     path("api/v1/", include("accounts.urls")),
+    path("api/v1/policy/status", PolicyStatusView.as_view(), name="policy-status"),
     path("api/v1/admin/", include(admin_urlpatterns)),
 ]

@@ -1,7 +1,9 @@
 from django.http import FileResponse
 from rest_framework import exceptions, status
 from rest_framework.parsers import MultiPartParser
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from core.throttling import PolicyUploadThrottle
 from core.views import AdminAPIView
@@ -36,6 +38,15 @@ class PolicyView(AdminAPIView):
         policy = accept_upload(uploaded_file, request.user)
         # 取り込みは、ワーカーが行う。ここでは、受け付けたことだけを返す
         return Response(UploadSerializer(policy).data, status=status.HTTP_202_ACCEPTED)
+
+
+class PolicyStatusView(APIView):
+    """規程が登録されているか。ログイン済みなら、誰でも確認できる。"""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        return Response({"registered": current_policy() is not None})
 
 
 class PolicyFileView(AdminAPIView):

@@ -13,8 +13,8 @@ PASSWORD = "valid-password-2026"
 
 
 @pytest.fixture(autouse=True)
-def use_fake_rag(settings):
-    # テストではAIを呼ばず、固定の回答を返す実装を使う
+def use_fake_rag(settings, registered_policy):
+    # テストではAIを呼ばず、固定の回答を返す実装を使う。規程は、登録済みにしておく
     settings.RAG_BACKEND = "fake"
 
 
