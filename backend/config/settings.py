@@ -26,6 +26,7 @@ INSTALLED_APPS = [
     "accounts",
     "core",
     "chat",
+    "policies",
 ]
 
 MIDDLEWARE = [
@@ -110,6 +111,7 @@ REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"] = {
     "chat_day": os.environ.get("THROTTLE_CHAT_USER_DAY", "200/day"),
     "ai_global_minute": os.environ.get("THROTTLE_AI_GLOBAL_MINUTE", "12/min"),
     "ai_global_day": os.environ.get("THROTTLE_AI_GLOBAL_DAY", "450/day"),
+    "policy_upload": os.environ.get("THROTTLE_POLICY_UPLOAD", "10/hour"),
 }
 # 前段のプロキシ（Caddyなど）の段数。0 のときは X-Forwarded-For を信用せず、接続元のIPを使う
 REST_FRAMEWORK["NUM_PROXIES"] = int(os.environ.get("TRUSTED_PROXY_COUNT", "0"))
@@ -120,3 +122,17 @@ LOGIN_LOCK_SECONDS = int(os.environ.get("LOGIN_LOCK_SECONDS", "900"))
 
 # デモ用ユーザーの共通パスワード（seed_demo で使用）
 DEMO_PASSWORD = os.environ.get("DEMO_PASSWORD", "")
+
+# アップロードされた規程のPDFの保存先（URLでは公開しない。MEDIA_URL は設定しない）
+MEDIA_ROOT = os.environ.get("MEDIA_ROOT", str(BASE_DIR / "media"))
+
+# 規程のアップロードと取り込みの上限（環境変数で変更できる）
+POLICY_MAX_UPLOAD_MB = int(os.environ.get("POLICY_MAX_UPLOAD_MB", "20"))
+POLICY_MAX_PAGES = int(os.environ.get("POLICY_MAX_PAGES", "500"))
+# 質問のたびに規程の全文をAIへ送るため、長すぎると、AIの利用枠（トークン数/分）を超える
+POLICY_MAX_TEXT_CHARS = int(os.environ.get("POLICY_MAX_TEXT_CHARS", "200000"))
+POLICY_MIN_TEXT_CHARS = 100  # これ未満は「文字を読み取れない」（画像だけのPDFなど）
+POLICY_GARBLED_RATIO = 0.05  # 文字化けの目印が、これを超えて含まれたら失敗にする
+# 処理中のまま、この時間（分）を超えたら、失敗として扱う（ワーカーが止まった場合など）
+POLICY_STALE_MINUTES = int(os.environ.get("POLICY_STALE_MINUTES", "10"))
+POLICY_WORKER_POLL_SECONDS = int(os.environ.get("POLICY_WORKER_POLL_SECONDS", "2"))

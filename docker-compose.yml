@@ -31,6 +31,23 @@ services:
     volumes:
       # 開発中はソースをマウントして、変更を即時反映（runserverの自動リロード）
       - ./backend:/app
+      # アップロードされた規程のPDFの保存先（ワーカーと共有する）
+      - policy_files:/app/media
+      # テストで使う、サンプルのPDF
+      - ./samples:/samples:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # アップロードされた規程のPDFを取り込むワーカー（backend と同じイメージ）
+  worker:
+    build: ./backend
+    command: ["python", "manage.py", "run_policy_worker"]
+    env_file: .env
+    volumes:
+      - ./backend:/app
+      - policy_files:/app/media
     depends_on:
       db:
         condition: service_healthy
@@ -52,3 +69,4 @@ services:
 
 volumes:
   mysql_data:
+  policy_files:

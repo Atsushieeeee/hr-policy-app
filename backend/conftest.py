@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 from rest_framework.throttling import SimpleRateThrottle
 
@@ -38,3 +40,15 @@ def set_rate(monkeypatch):
 def fast_password_hasher(settings):
     """テストを速くするため、パスワードのハッシュを軽い方式にする（本番の設定には影響しない）。"""
     settings.PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
+
+
+@pytest.fixture(autouse=True)
+def media_root(settings, tmp_path):
+    """アップロードされたファイルは、テストごとの一時フォルダに保存する。"""
+    settings.MEDIA_ROOT = str(tmp_path / "media")
+
+
+@pytest.fixture
+def samples(settings):
+    """サンプルのPDFがあるフォルダ（リポジトリの samples/）。"""
+    return Path(settings.BASE_DIR).parent / "samples"
