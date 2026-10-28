@@ -19,6 +19,12 @@ class PolicyView(AdminAPIView):
     parser_classes = [MultiPartParser]
     throttle_classes = [PolicyUploadThrottle]
 
+    def get_throttles(self):
+        # 回数を制限するのは、アップロード（PUT）だけ。画面を開く・状況を確認する GET は、数えない
+        if self.request.method != "PUT":
+            return []
+        return super().get_throttles()
+
     def get(self, request):
         """現行の規程と、取り込みの状況。規程が未登録でも 200 で返す。"""
         policy = current_policy()

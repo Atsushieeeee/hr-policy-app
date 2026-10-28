@@ -46,6 +46,17 @@ class TestAccess:
 
 
 class TestInfo:
+    def test_is_not_counted_by_the_upload_rate_limit(self, samples, admin_user, set_rate, clock):
+        set_rate("policy_upload", "1/hour")
+        client = api_client(admin_user)
+        for _ in range(5):
+            assert client.get(URL).status_code == 200
+
+        # アップロード（PUT）の回数は、GET に消費されていない
+        response = client.put(URL, {"file": pdf(samples)}, format="multipart")
+
+        assert response.status_code == 202
+
     def test_returns_200_with_nulls_when_nothing_is_registered(self, admin_user):
         response = api_client(admin_user).get(URL)
 
