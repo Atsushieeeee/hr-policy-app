@@ -16,7 +16,7 @@ type Page = {
 
 const toMessage = (e: unknown) => (e instanceof ApiError ? e.message : '予期しないエラーが発生しました')
 
-// 管理者の一覧と、管理者権限の解除。
+// 管理者の一覧、管理者にできるユーザー（候補）の一覧、管理者権限の付与と解除。
 export const useAdminUsers = () => {
   const { request, post } = useApi()
 
@@ -25,14 +25,20 @@ export const useAdminUsers = () => {
   const loading = ref(false)
   const error = ref<string | null>(null)
 
-  const load = async (page: number, pageSize: number) => {
+  // 連続して呼ばれたとき（検索の入力中など）、遅れて返った古い結果で、新しい結果を上書きしない
+  let latest = 0
+
+  const fetchList = async (path: string) => {
+    const current = ++latest
     loading.value = true
     error.value = null
     try {
-      const data = await request<Page>(`/admin/admins?page=${page}&page_size=${pageSize}`)
+      const data = await request<Page>(path)
+      if (current !== latest) return
       items.value = data.results
       total.value = data.count
     } catch (e) {
+      if (current !== latest) return
       // 範囲外のページ（最後のページの人を全員外した直後など）は、空の一覧として扱う
       if (e instanceof ApiError && e.status === 404) {
         items.value = []
@@ -40,15 +46,22 @@ export const useAdminUsers = () => {
         error.value = toMessage(e)
       }
     } finally {
-      loading.value = false
+      if (current === latest) loading.value = false
     }
   }
 
+  const loadAdmins = (page: number, pageSize: number) =>
+    fetchList(`/admin/admins?page=${page}&page_size=${pageSize}`)
+
+  // q は、名前・メールアドレスの部分一致
+  const loadCandidates = (page: number, pageSize: number, q: string) =>
+    fetchList(`/admin/users?page=${page}&page_size=${pageSize}&q=${encodeURIComponent(q)}`)
+
   // 成功したかどうかを返す。失敗したときの理由は、error に入る
-  const revoke = async (userIds: number[]): Promise<boolean> => {
+  const send = async (path: string, userIds: number[]): Promise<boolean> => {
     error.value = null
     try {
-      await post('/admin/admins/revoke', { user_ids: userIds })
+      await post(path, { user_ids: userIds })
       return true
     } catch (e) {
       error.value = toMessage(e)
@@ -56,5 +69,8 @@ export const useAdminUsers = () => {
     }
   }
 
-  return { items, total, loading, error, load, revoke }
+  const grant = (userIds: number[]) => send('/admin/admins', userIds)
+  const revoke = (userIds: number[]) => send('/admin/admins/revoke', userIds)
+
+  return { items, total, loading, error, loadAdmins, loadCandidates, grant, revoke }
 }
