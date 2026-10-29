@@ -1,17 +1,29 @@
 <script setup lang="ts">
 const MAX_LENGTH = 1000
 
-const { result, error, loading, ask } = useChat()
+const auth = useAuthStore()
+const { result, error, errorCode, loading, ask } = useChat()
+const { registered, error: statusError, loading: checking, check, markNotRegistered } = usePolicyStatus()
 const question = ref('')
 const asked = ref('')
 
-const canSend = computed(() => question.value.trim().length > 0 && question.value.length <= MAX_LENGTH && !loading.value)
+onMounted(check)
+
+// 登録状況の確認に失敗したときは、入力欄を止めない（質問を送れば、サーバーが判断する）
+const notRegistered = computed(() => registered.value === false)
+const disabled = computed(() => notRegistered.value || checking.value)
+
+const canSend = computed(
+  () => question.value.trim().length > 0 && question.value.length <= MAX_LENGTH && !loading.value && !disabled.value,
+)
 
 const send = async () => {
   if (!canSend.value) return
   asked.value = question.value.trim()
   const ok = await ask(asked.value)
   if (ok) question.value = ''
+  // 画面を開いた後に、規程が無くなった場合
+  else if (errorCode.value === 'POLICY_NOT_REGISTERED') markNotRegistered()
 }
 
 // 日本語入力の変換確定のEnterでは送信しない
@@ -26,6 +38,17 @@ const onKeydown = (e: KeyboardEvent) => {
 <template>
   <v-card max-width="720" class="mx-auto mt-8" title="就業規則について質問する">
     <v-card-text>
+      <v-alert v-if="notRegistered" type="warning" variant="tonal" class="mb-4" title="就業規則が未登録です">
+        <template v-if="auth.isAdmin">
+          <NuxtLink to="/admin/upload">管理者画面</NuxtLink>から、就業規則のPDFをアップロードしてください。
+        </template>
+        <template v-else>管理者に、就業規則の登録を依頼してください。</template>
+        <div class="mt-2">
+          <v-btn size="small" variant="outlined" :loading="checking" @click="check">もう一度確認する</v-btn>
+        </div>
+      </v-alert>
+      <v-alert v-else-if="statusError" type="error" variant="tonal" class="mb-4">{{ statusError }}</v-alert>
+
       <v-textarea
         v-model="question"
         label="質問を入力してください"
@@ -33,7 +56,7 @@ const onKeydown = (e: KeyboardEvent) => {
         auto-grow
         counter
         :maxlength="MAX_LENGTH"
-        :disabled="loading"
+        :disabled="loading || disabled"
         @keydown="onKeydown"
       />
       <div class="d-flex justify-end">
