@@ -9,7 +9,7 @@
 - フロントエンド: Nuxt 4 / Vue 3 / Vuetify 3（TypeScript、SPAモード）
 - バックエンド: Django / Django REST Framework
 - DB: MySQL
-- AI: Gemini API（検証）→ さくらのAI Engine（移行予定）
+- AI: Gemini API（接続先は、`RagClient` で抽象化していて、差し替えられる）
 - 環境: Docker / Docker Compose
 
 ## 実装状況
@@ -18,10 +18,9 @@
 |---|---|
 | ログイン・ログアウト、権限（管理者権限の有無）、レート制限 | 実装済み |
 | チャット（Gemini、根拠つきの回答。管理者が登録した規程に基づく） | 実装済み |
-| 規程PDFのアップロード（常に全文を置き換え） | 予定（フェーズ2） |
-| 管理者権限の付与・解除 | 予定（フェーズ2） |
-| 会話の文脈、チャットの履歴の保存 | 予定（フェーズ3） |
-| さくらのAI Engineへの移行 | 予定（フェーズ4） |
+| 規程PDFのアップロード（常に全文を置き換え。PDFのプレビュー） | 実装済み |
+| 管理者権限の付与・解除 | 実装済み |
+| 会話の文脈、チャットの履歴の保存、回答へのフィードバック、出典のPDFページ表示、回答精度の評価セット | 予定（フェーズ3） |
 | CSVでのユーザー取込、監査ログ、公開の準備 | 予定（フェーズ5） |
 | FAQ（質問ログからの候補、公開、AIを呼ばない回答） | 追加機能として予定（フェーズ6） |
 
@@ -39,7 +38,7 @@ flowchart LR
         back["backend<br/>Django REST Framework<br/>:8000"]
         db[("db<br/>MySQL 8.0")]
     end
-    ai["Gemini API<br/>（後で さくらのAI Engine に移行）"]
+    ai["Gemini API"]
 
     user -->|"画面 / API（/api/v1/*）"| front
     front -->|"/api/* を中継"| back
