@@ -4,6 +4,8 @@
 //   外部API(30秒) < サーバーの上限 < プロキシ < ブラウザ(この値)
 // 特別に長く待つ処理（大きなファイルのアップロードなど）だけ、呼び出し側で timeoutMs を上書きする。
 const DEFAULT_TIMEOUT_MS = 60_000
+// ファイルのアップロード（大きなPDFなど）は、通信に時間がかかるため、長めにする
+export const UPLOAD_TIMEOUT_MS = 120_000
 
 export class ApiError extends Error {
   constructor(
@@ -20,6 +22,8 @@ type RequestOptions = RequestInit & {
   timeoutMs?: number
   /** true にすると、アクセストークンを付けず、401でも更新しない（ログイン・更新・ログアウト用） */
   skipAuth?: boolean
+  /** 'blob' にすると、成功時の応答をファイル（PDFなど）として受け取る。既定は JSON */
+  responseType?: 'json' | 'blob'
 }
 
 type RawResult = { response: Response; body: unknown }
@@ -67,20 +71,26 @@ export const useApi = () => {
   const router = useRouter()
 
   const run = async (path: string, init: RequestOptions, token: string | null): Promise<RawResult> => {
-    const { timeoutMs = DEFAULT_TIMEOUT_MS, skipAuth, ...fetchInit } = init
+    const { timeoutMs = DEFAULT_TIMEOUT_MS, skipAuth, responseType = 'json', ...fetchInit } = init
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), timeoutMs)
     try {
       const response = await fetch(`/api/v1${path}`, {
         ...fetchInit,
         headers: {
-          Accept: 'application/json',
+          Accept: responseType === 'blob' ? 'application/pdf, application/json' : 'application/json',
           ...(token && !skipAuth ? { 'X-Access-Token': token } : {}),
           ...fetchInit.headers,
         },
         signal: controller.signal,
       })
-      const body = response.status === 204 ? null : await response.json().catch(() => null)
+      // 失敗したときは、ファイルを要求していても、エラーはJSONで返ってくる
+      const body =
+        response.status === 204
+          ? null
+          : responseType === 'blob' && response.ok
+            ? await response.blob()
+            : await response.json().catch(() => null)
       return { response, body }
     } finally {
       clearTimeout(timer)
@@ -130,5 +140,13 @@ export const useApi = () => {
       body: JSON.stringify(body),
     })
 
-  return { request, post }
+  // ファイル（multipart）を送る。Content-Type は付けない（ブラウザが境界つきで設定する）
+  const upload = <T>(path: string, form: FormData, init: RequestOptions = {}): Promise<T> =>
+    request<T>(path, { timeoutMs: UPLOAD_TIMEOUT_MS, ...init, method: 'PUT', body: form })
+
+  // ファイル（PDFなど）を取得する
+  const getBlob = (path: string, init: RequestOptions = {}): Promise<Blob> =>
+    request<Blob>(path, { ...init, responseType: 'blob' })
+
+  return { request, post, upload, getBlob }
 }
