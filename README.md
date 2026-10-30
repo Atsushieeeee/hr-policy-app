@@ -107,7 +107,7 @@ sequenceDiagram
 |---|---|---|
 | User | ユーザー。管理者権限（`is_admin`）の有無を持つ | 実装済み |
 | PolicyDocument | アップロードされた規程（抽出したテキストと、取り込みの状態を保存） | フェーズ2で実装中 |
-| ChatSession / ChatMessage | チャットの会話と、質問・回答（根拠つき） | 予定（フェーズ3） |
+| ChatSession / ChatMessage | チャットの会話と、質問・回答（根拠つき） | フェーズ3で実装中 |
 | AuditLog | 重要な操作の記録 | 予定（フェーズ5） |
 | FAQ | 公開するよくある質問と回答 | 追加機能として予定（フェーズ6） |
 
@@ -150,6 +150,7 @@ erDiagram
         string role "user / assistant"
         text content
         string normalized_question
+        string question_hash "normalized_question の SHA-256（集計用の索引）"
         json sources
         bool is_no_answer
         string feedback
@@ -289,6 +290,10 @@ curl http://127.0.0.1:8000/api/v1/me -H "X-Access-Token: <loginで返ったacces
 ```
 
 - チャットAPI（`POST /api/v1/chat/messages`）は、ログインが必要です。管理者権限の有無に関わらず、ログイン済みのユーザーなら使えます（未認証は 401）。
+  - リクエスト: `{ "question": "...", "session_id": 12 }`（`session_id` は省略でき、省略すると新しい会話を始めます）。他人の会話、存在しない会話を指定すると `404`（`NOT_FOUND`）です。
+  - レスポンス: `answer`、`found`、`sources` に加えて、`session_id` と `message_id`（回答のメッセージID）を返します。
+  - 質問と回答は、回答できたときだけ、会話に紐づけて保存します。AIのエラー、規程が未登録のとき（`409`）などでは、会話もメッセージも作りません。
+  - 質問の正規化（`normalized_question`）: NFKC、前後の空白の除去、連続する空白を1つに、英字は小文字、末尾の疑問符・句点の除去。完全一致の集計に使います（MySQLの索引の上限を超えないよう、索引は、正規化した質問のSHA-256（`question_hash`）に付けます）。
 - `/api/v1/admin/` 配下は、管理者権限（`is_admin`）を持つユーザーだけが使えます（未認証は 401、管理者権限なしは 403）。動作確認用に `GET /api/v1/admin/ping` があります。権限は、トークンではなく DB の現在値で判定するため、変更は次のリクエストから反映されます。
 - 管理者用 API は、`core.views.AdminAPIView` を継承して作り、`config/urls.py` の `admin_urlpatterns` に登録します。権限のテストが、登録されたすべての API を自動で検証します。
 - レート制限（超過すると `429` と `Retry-After` ヘッダを返し、メッセージに待ち時間が入ります）。値は `.env` で変更できます。
