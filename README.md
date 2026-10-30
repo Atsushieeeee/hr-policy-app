@@ -227,6 +227,28 @@ docker compose exec backend python manage.py set_password --email a@example.com
 | admin@example.com | 管理者 |
 | employee1@example.com 〜 employee3@example.com | 社員 |
 
+#### CSVでの一括登録
+たくさんのユーザーを登録するときは、CSVから一括で登録できます。サンプルは `samples/users.csv` です。
+
+```bash
+docker compose exec backend python manage.py import_users /samples/users.csv --dry-run   # 作成せず、検証だけ
+docker compose exec backend python manage.py import_users /samples/users.csv --output /app/import_result.csv
+```
+
+| 列 | 必須 | 内容 |
+|---|---|---|
+| `email` | 必須 | メールアドレス（小文字に統一して扱う） |
+| `name` | 必須 | 名前（100文字まで） |
+| `is_admin` | 任意 | `true` / `false`（`1` / `0`、`yes` / `no` も可）。空なら社員 |
+| `password` | 任意 | 12文字以上。空、または列がなければ、ランダムに生成する |
+
+- 文字コードはUTF-8（Excelの「CSV UTF-8」形式でも読めます）。1行目はヘッダーです。
+- 登録済みのメールアドレスと、ファイルの中で2回目以降に出てくるメールアドレスは、更新せずスキップします。
+- エラーの行（形式・パスワードの要件など）は、行番号と理由を表示します。既定では、エラーの行だけを飛ばして、ほかを作成します（終了コードは1）。`--atomic` を付けると、エラーが1行でもあれば、1件も作成しません。
+- 生成したパスワードは、あとから確認できません。`--output` で結果をCSVに書き出すと、パスワードを含めて、そのファイルに残せます（画面には表示しません）。ファイルの権限は 600 で、既存のファイルは上書きしません。配布したら、ファイルを削除してください（`backend/` 直下に作られます）。
+- 控えそこなったときや、利用者がパスワードを忘れたときは、`set_password` で再設定できます。
+- CSVに `password` を書くと、ファイルに平文が残ります。省略して、生成するのがおすすめです。
+
 ### 画面とログイン
 - 画面は、ログインしていないと開けません（開くと、ログイン画面に移ります。ログイン後は、元の画面に戻ります）。
 - 管理者権限のあるユーザーには、ヘッダーに歯車アイコンが表示され、管理者画面（`/admin/...`）を開けます。管理者権限のないユーザーが開こうとすると、チャット画面に戻されます。

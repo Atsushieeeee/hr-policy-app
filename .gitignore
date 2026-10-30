@@ -9,6 +9,8 @@ __pycache__/
 .venv/
 db.sqlite3
 media/
+# import_users の結果（生成したパスワードを含む）
+backend/import_result*.csv
 
 # Node / Nuxt
 node_modules/
