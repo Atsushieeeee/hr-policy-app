@@ -9,6 +9,9 @@ from rag.base import Turn
 
 from .models import ChatMessage, ChatSession
 
+# 画面に返す、会話のメッセージの上限
+MAX_HISTORY_MESSAGES = 100
+
 # 質問の末尾の、疑問符・句点と空白（「有給は何日？」と「有給は何日」を同じ質問として数える）
 _TRAILING = re.compile(r"[？?。.\s]+$")
 _WHITESPACE = re.compile(r"\s+")
@@ -24,6 +27,29 @@ def normalize_question(text):
 def hash_question(normalized):
     """正規化した質問の、集計用の値。空の質問は、集計の対象にしない（空文字）。"""
     return hashlib.sha256(normalized.encode()).hexdigest() if normalized else ""
+
+
+def latest_session(user):
+    """ユーザーの最新の会話（最後に作った会話）。なければ None。"""
+    return ChatSession.objects.filter(user=user).order_by("-id").first()
+
+
+def start_session(user):
+    """「新しい会話」を始める。返り値は、(会話, 新しく作ったか)。
+
+    直前の会話が、まだ空（質問がない）なら、新しく作らず、その会話を返す（空の会話が増えない）。
+    """
+    latest = latest_session(user)
+    if latest is not None and not latest.messages.exists():
+        return latest, False
+    return ChatSession.objects.create(user=user), True
+
+
+def recent_messages(session):
+    """会話のメッセージ（古い順）。直近の MAX_HISTORY_MESSAGES 件まで。"""
+    messages = list(session.messages.order_by("-id")[:MAX_HISTORY_MESSAGES])
+    messages.reverse()
+    return messages
 
 
 def find_session(user, session_id):

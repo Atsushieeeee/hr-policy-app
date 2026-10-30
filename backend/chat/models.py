@@ -24,10 +24,6 @@ class ChatMessage(models.Model):
         USER = "user", "質問"
         ASSISTANT = "assistant", "回答"
 
-    class Feedback(models.TextChoices):
-        GOOD = "good", "役に立った"
-        BAD = "bad", "役に立たなかった"
-
     session = models.ForeignKey(ChatSession, on_delete=models.CASCADE, related_name="messages")
     role = models.CharField(max_length=20, choices=Role.choices)
     content = models.TextField()
@@ -41,8 +37,6 @@ class ChatMessage(models.Model):
     sources = models.JSONField(default=list, blank=True)
     # 回答だけに入る。規程に該当する記載が見つからなかった回答か
     is_no_answer = models.BooleanField(default=False)
-    # 回答だけに入る、利用者の評価
-    feedback = models.CharField(max_length=10, choices=Feedback.choices, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

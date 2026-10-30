@@ -58,7 +58,6 @@ class TestSave:
         assert reply.id == body["message_id"]
         assert reply.sources == [{"policy_id": registered_policy.id, "article": "第7条", "page": 2}]
         assert reply.is_no_answer is False
-        assert reply.feedback is None
 
     def test_answer_is_saved_without_question_fields(self, client, taro):
         ask(client, taro)

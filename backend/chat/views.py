@@ -9,7 +9,15 @@ from policies.services import current_policy
 from rag.base import RagError
 from rag.factory import get_rag_client
 
-from .services import find_session, recent_history, save_exchange
+from .models import ChatMessage
+from .services import (
+    find_session,
+    latest_session,
+    recent_history,
+    recent_messages,
+    save_exchange,
+    start_session,
+)
 
 MAX_QUESTION_LENGTH = 1000
 
@@ -70,5 +78,46 @@ class ChatMessageView(APIView):
                 "answer": answer.text,
                 "found": answer.found,
                 "sources": [{"article": s.article, "page": s.page} for s in answer.sources],
+            }
+        )
+
+
+def message_data(message):
+    """画面に返す、メッセージ1件。found は回答だけに付く（質問では null）。"""
+    is_reply = message.role == ChatMessage.Role.ASSISTANT
+    return {
+        "id": message.id,
+        "role": message.role,
+        "content": message.content,
+        "found": (not message.is_no_answer) if is_reply else None,
+        "sources": [{"article": s["article"], "page": s["page"]} for s in message.sources],
+        "created_at": message.created_at,
+    }
+
+
+class ChatSessionView(APIView):
+    """「新しい会話」を始める。直前の会話が空のときは、新しく作らず、その会話を返す。"""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        session, created = start_session(request.user)
+        http_status = status.HTTP_201_CREATED if created else status.HTTP_200_OK
+        return Response({"session_id": session.id}, status=http_status)
+
+
+class ChatCurrentSessionView(APIView):
+    """ログインユーザーの最新の会話と、そのメッセージ。画面を開き直しても、会話が続くようにする。"""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        session = latest_session(request.user)
+        if session is None:
+            return Response({"session_id": None, "messages": []})
+        return Response(
+            {
+                "session_id": session.id,
+                "messages": [message_data(m) for m in recent_messages(session)],
             }
         )
