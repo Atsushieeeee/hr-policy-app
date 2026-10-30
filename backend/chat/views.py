@@ -9,7 +9,7 @@ from policies.services import current_policy
 from rag.base import RagError
 from rag.factory import get_rag_client
 
-from .services import find_session, save_exchange
+from .services import find_session, recent_history, save_exchange
 
 MAX_QUESTION_LENGTH = 1000
 
@@ -51,10 +51,12 @@ class ChatMessageView(APIView):
         if policy is None:
             raise PolicyNotRegistered()  # 規程がないときは、AIを呼ばない（AIの利用枠も使わない）
 
+        history = recent_history(session)
+
         check_ai_budget(request, self)  # AI側の上限を超える前に、こちらで止める
 
         try:
-            answer = get_rag_client().answer(question, policy.extracted_text)
+            answer = get_rag_client().answer(question, policy.extracted_text, history)
         except RagError as e:
             return error_response(e.code, e.message, e.status)
 

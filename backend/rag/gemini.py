@@ -1,11 +1,12 @@
 import logging
+from collections.abc import Sequence
 
 from google import genai
 from google.genai import errors, types
 from pydantic import BaseModel
 
-from .base import Answer, RagError, Source
-from .prompts import NOT_FOUND_MESSAGE, SYSTEM_PROMPT, build_user_content
+from .base import Answer, RagError, Source, Turn
+from .prompts import NOT_FOUND_MESSAGE, SYSTEM_PROMPT, build_messages
 
 logger = logging.getLogger(__name__)
 
@@ -31,11 +32,14 @@ class GeminiClient:
         )
         self._model = model
 
-    def answer(self, question: str, policy_text: str) -> Answer:
+    def answer(self, question: str, policy_text: str, history: Sequence[Turn] = ()) -> Answer:
         try:
             response = self._client.models.generate_content(
                 model=self._model,
-                contents=build_user_content(policy_text, question),
+                contents=[
+                    types.Content(role=role, parts=[types.Part(text=text)])
+                    for role, text in build_messages(policy_text, question, history)
+                ],
                 config=types.GenerateContentConfig(
                     system_instruction=SYSTEM_PROMPT,
                     response_mime_type="application/json",
