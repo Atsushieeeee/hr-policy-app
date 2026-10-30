@@ -319,6 +319,20 @@ curl http://127.0.0.1:8000/api/v1/me -H "X-Access-Token: <loginで返ったacces
 - 使用するモデルは `.env` の `GEMINI_MODEL` で変更できます。無料枠では、モデルによって混雑や提供終了で失敗することがあります。
 - APIキーなしで画面を確認したい場合は、`.env` の `RAG_BACKEND=fake` にすると、AIを呼ばず固定の回答を返します。
 
+### 回答精度の評価
+プロンプトやモデルを変えたときに、回答の精度を同じ基準で確認するコマンドです。`samples/dummy_policy.pdf` に基づく約40件の質問（直接・言い換え・規程に記載なし・追質問）を、AIに送って採点します。規程は、サンプルのPDFをアップロードと同じ処理で読み込んで使い、DBの規程は変更しません。
+
+```bash
+docker compose exec backend python manage.py eval_rag                      # 全件を実行（約4分）
+docker compose exec backend python manage.py eval_rag --limit 5            # 先頭の5件だけ
+docker compose exec backend python manage.py eval_rag --fail-under 0.9     # 合格率が90%未満なら終了コード1
+```
+
+- 1件ごとの合否（`PASS` / `FAIL` / `ERROR`）と、全体の集計（該当なしの判定・条・ページの一致率）を表示します。条とページは、根拠のどれかが期待と合っていれば一致とします。
+- AI全体の上限（12回/分）に収めるため、既定で5.5秒ずつ空けて実行します（`--interval` で変更可）。AIがエラーを返した件は `ERROR` とし、一致率の計算からは除きます。
+- 評価セットは `backend/rag/evals/cases.py` にあります。質問を増やすときは、ここに追加してください。
+- 実際のAIを呼ぶため、GitHub Actions では実行しません。採点の処理は、AIを使わないテストで確認しています。
+
 ### 停止
 ```bash
 docker compose down        # コンテナを停止・削除（DBのデータは残る）
