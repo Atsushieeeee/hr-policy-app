@@ -92,6 +92,8 @@ RAG_BACKEND = os.environ.get("RAG_BACKEND", "gemini")  # gemini / fake
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.5-flash-lite")
 GEMINI_TIMEOUT_SEC = int(os.environ.get("GEMINI_TIMEOUT_SEC", "30"))
+# 追質問のために、AIへ渡す、会話の直近の往復数
+CHAT_CONTEXT_TURNS = int(os.environ.get("CHAT_CONTEXT_TURNS", "5"))
 
 # レート制限の記録は、DBキャッシュに保存する（テーブルは、migrate で作られる）
 CACHES = {

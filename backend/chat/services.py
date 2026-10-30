@@ -2,7 +2,10 @@ import hashlib
 import re
 import unicodedata
 
+from django.conf import settings
 from django.db import transaction
+
+from rag.base import Turn
 
 from .models import ChatMessage, ChatSession
 
@@ -26,6 +29,27 @@ def hash_question(normalized):
 def find_session(user, session_id):
     """ユーザー自身の会話を返す。他人の会話、存在しない会話は None。"""
     return ChatSession.objects.filter(id=session_id, user=user).first()
+
+
+def recent_history(session):
+    """会話の直近の往復（古い順）。AIへ渡す。session が None（新しい会話）なら、空。"""
+    if session is None:
+        return []
+    limit = settings.CHAT_CONTEXT_TURNS
+    if limit <= 0:
+        return []
+    messages = list(session.messages.order_by("-id")[: limit * 2])
+    messages.reverse()
+
+    turns = []
+    pending = None
+    for message in messages:
+        if message.role == ChatMessage.Role.USER:
+            pending = message.content
+        elif pending is not None:
+            turns.append(Turn(question=pending, answer=message.content))
+            pending = None
+    return turns
 
 
 @transaction.atomic

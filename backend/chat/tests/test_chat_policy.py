@@ -44,7 +44,7 @@ def test_answers_based_on_the_registered_policy(client, user, registered_policy)
 
     assert response.status_code == 200
     get_client.return_value.answer.assert_called_once_with(
-        "有給休暇は何日ですか？", registered_policy.extracted_text
+        "有給休暇は何日ですか？", registered_policy.extracted_text, []
     )
 
 
