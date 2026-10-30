@@ -40,7 +40,7 @@ class RagError(Exception):
 class RagClient(Protocol):
     """就業規則に基づく回答を返すクライアントの共通インターフェース。
 
-    実装を差し替えられるようにしている（Gemini → さくらのAI Engine）。
+    実装を差し替えられるようにしている（Gemini、テスト用の FakeClient）。
     規程のテキスト（現行の規程の全文）は、質問のたびに渡す。
     history は、同じ会話の、直近の往復（古い順）。
     追質問の意味を理解するためだけに使い、回答の根拠にはしない。
