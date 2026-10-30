@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import type { ChatError, ChatMessage } from '~/composables/api/chat/useChat'
+import type { ChatError, ChatMessage, ChatSource } from '~/composables/api/chat/useChat'
 
 const props = defineProps<{
   messages: ChatMessage[]
   sending: boolean
   error: ChatError | null
 }>()
-const emit = defineEmits<{ retry: [] }>()
+const emit = defineEmits<{ retry: []; 'open-source': [source: ChatSource] }>()
 
 const container = ref<HTMLElement | null>(null)
 
@@ -27,7 +27,7 @@ onMounted(scrollToBottom)
         <div v-if="m.role === 'user'" class="d-flex justify-end">
           <v-sheet color="primary" rounded="lg" class="user-message pa-3 text-pre-wrap">{{ m.content }}</v-sheet>
         </div>
-        <ChatAnswerBubble v-else :message="m" />
+        <ChatAnswerBubble v-else :message="m" @open-source="emit('open-source', $event)" />
       </template>
 
       <div v-if="sending" class="d-flex align-center ga-3 text-medium-emphasis">

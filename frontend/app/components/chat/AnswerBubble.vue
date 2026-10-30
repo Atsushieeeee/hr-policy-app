@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import type { ChatMessage } from '~/composables/api/chat/useChat'
+import type { ChatMessage, ChatSource } from '~/composables/api/chat/useChat'
 
 defineProps<{ message: ChatMessage }>()
+defineEmits<{ 'open-source': [source: ChatSource] }>()
 </script>
 
 <template>
@@ -11,7 +12,14 @@ defineProps<{ message: ChatMessage }>()
     </v-alert>
     <div v-if="message.sources.length" class="mt-2">
       <div class="text-caption text-medium-emphasis">根拠</div>
-      <v-chip v-for="s in message.sources" :key="`${s.article}-${s.page}`" size="small" class="mr-2 mt-1">
+      <v-chip
+        v-for="s in message.sources"
+        :key="`${s.article}-${s.page}`"
+        size="small"
+        class="mr-2 mt-1"
+        link
+        @click="$emit('open-source', s)"
+      >
         {{ s.article }}<template v-if="s.page">（p.{{ s.page }}）</template>
       </v-chip>
     </div>

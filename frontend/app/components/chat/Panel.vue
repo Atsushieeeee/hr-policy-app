@@ -3,12 +3,22 @@ const auth = useAuthStore()
 const notification = useNotificationStore()
 const { messages, loading, loadError, sending, error, load, ask, retry, startNew } = useChat()
 const { registered, error: statusError, loading: checking, check, markNotRegistered } = usePolicyStatus()
+const {
+  url: pdfUrl,
+  loading: pdfLoading,
+  error: pdfError,
+  load: loadPdf,
+  release: releasePdf,
+} = usePolicyFile()
 const question = ref('')
+const sourceOpen = ref(false)
+const selectedSource = ref<ChatSource | null>(null)
 
 onMounted(() => {
   check()
   load()
 })
+onBeforeUnmount(releasePdf)
 
 // 登録状況の確認に失敗したときは、入力欄を止めない（質問を送れば、サーバーが判断する）
 const notRegistered = computed(() => registered.value === false)
@@ -33,6 +43,13 @@ const send = async () => {
 const onRetry = async () => {
   const lastQuestion = [...messages.value].reverse().find((m) => m.role === 'user')?.content ?? ''
   handleResult(await retry(), lastQuestion)
+}
+
+// 根拠を押したとき。PDFは、初めて開くときに1回だけ取得する
+const openSource = (source: ChatSource) => {
+  selectedSource.value = source
+  sourceOpen.value = true
+  loadPdf()
 }
 
 const onStartNew = async () => {
@@ -68,7 +85,15 @@ const onStartNew = async () => {
       </div>
     </v-alert>
 
-    <ChatMessageList v-else-if="messages.length" class="chat__list" :messages :sending :error @retry="onRetry" />
+    <ChatMessageList
+      v-else-if="messages.length"
+      class="chat__list"
+      :messages
+      :sending
+      :error
+      @retry="onRetry"
+      @open-source="openSource"
+    />
 
     <div v-else class="text-center text-medium-emphasis pa-4">
       就業規則の内容について、質問してください。<br>
@@ -89,6 +114,15 @@ const onStartNew = async () => {
 
       <ChatMessageInput v-model="question" :disabled :sending @send="send" />
     </div>
+
+    <ChatSourceDialog
+      v-model="sourceOpen"
+      :source="selectedSource"
+      :url="pdfUrl"
+      :loading="pdfLoading"
+      :error="pdfError"
+      @retry="loadPdf"
+    />
   </div>
 </template>
 
