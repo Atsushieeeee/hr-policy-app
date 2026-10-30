@@ -55,16 +55,30 @@ class PolicyStatusView(APIView):
         return Response({"registered": current_policy() is not None})
 
 
+def current_policy_pdf():
+    """現行の規程のPDFを、ブラウザ内で表示できる形で返す。未登録は 404。"""
+    policy = current_policy()
+    if policy is None:
+        raise PolicyNotFound()
+    return FileResponse(
+        policy.file.open("rb"),
+        content_type="application/pdf",
+        as_attachment=False,
+        filename=policy.original_filename,
+    )
+
+
 class PolicyFileView(AdminAPIView):
-    """現行の規程のPDF。ブラウザ内で表示できる形で返す。"""
+    """現行の規程のPDF（管理者用）。"""
 
     def get(self, request):
-        policy = current_policy()
-        if policy is None:
-            raise PolicyNotFound()
-        return FileResponse(
-            policy.file.open("rb"),
-            content_type="application/pdf",
-            as_attachment=False,
-            filename=policy.original_filename,
-        )
+        return current_policy_pdf()
+
+
+class PolicyFileForUsersView(APIView):
+    """現行の規程のPDF（利用者用）。ログイン済みなら、誰でも取得できる（回答の根拠の確認用）。"""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        return current_policy_pdf()
