@@ -19,15 +19,22 @@ def _targets(user_ids):
 
 @transaction.atomic
 def grant_admin(user_ids):
-    """user_ids の全員に管理者権限を付ける（全員成功か、全員失敗）。すでに管理者でもよい。"""
+    """user_ids の全員に管理者権限を付ける（全員成功か、全員失敗）。すでに管理者でもよい。
+
+    実際に権限が変わったユーザーを返す。
+    """
     _lock_active_admins()
     targets = _targets(user_ids)
     User.objects.filter(id__in=[u.id for u in targets]).update(is_admin=True)
+    return [u for u in targets if not u.is_admin]
 
 
 @transaction.atomic
 def revoke_admin(actor_id, user_ids):
-    """user_ids の全員から管理者権限を外す（全員成功か、全員失敗）。管理者でなくてもよい。"""
+    """user_ids の全員から管理者権限を外す（全員成功か、全員失敗）。管理者でなくてもよい。
+
+    実際に権限が変わったユーザーを返す。
+    """
     admins = _lock_active_admins()
     if actor_id in user_ids:
         raise CannotRevokeSelf()
@@ -38,3 +45,4 @@ def revoke_admin(actor_id, user_ids):
     if not remaining:
         raise LastAdmin()
     User.objects.filter(id__in=[t.id for t in targets]).update(is_admin=False)
+    return [t for t in targets if t.is_admin]

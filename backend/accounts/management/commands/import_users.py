@@ -5,6 +5,8 @@ from pathlib import Path
 from django.core.management.base import BaseCommand, CommandError
 
 from accounts.import_services import CREATE, ERROR, SKIP, CsvFormatError, ImportReport, import_users
+from audit.models import AuditLog
+from audit.services import record
 
 STATUS_LABELS = {CREATE: "作成", SKIP: "スキップ", ERROR: "エラー"}
 
@@ -52,6 +54,17 @@ class Command(BaseCommand):
         if out_file:
             self._write_output(out_file, output, report)
         self._print_report(report, dry_run, show_passwords=not output)
+        if report.executed:
+            # 取り込んだユーザーは、ユーザーのテーブルに残るため、件数だけを記録する
+            record(
+                AuditLog.Action.USERS_IMPORT,
+                detail={
+                    "filename": Path(csv_path).name,
+                    "created": report.count(CREATE),
+                    "skipped": report.count(SKIP),
+                    "errors": report.count(ERROR),
+                },
+            )
 
         if report.count(ERROR):
             raise CommandError(

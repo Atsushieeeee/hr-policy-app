@@ -28,6 +28,7 @@ INSTALLED_APPS = [
     "chat",
     "policies",
     "rag",
+    "audit",
 ]
 
 MIDDLEWARE = [

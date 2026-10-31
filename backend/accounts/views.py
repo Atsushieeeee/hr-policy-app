@@ -1,6 +1,8 @@
 from django.conf import settings
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import update_last_login
+from django.core.exceptions import ValidationError
+from django.core.validators import validate_email
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -8,6 +10,8 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from audit.models import AuditLog
+from audit.services import record
 from core.exceptions import RateLimited, format_wait
 from core.throttling import LoginIpThrottle
 
@@ -31,6 +35,22 @@ def locked_error(wait):
     )
 
 
+def record_login_failure(request, email, reason):
+    """ログイン失敗の記録。メールアドレスの欄に、別の文字列（パスワードなど）が入力されても、
+    記録に残らないよう、メールアドレスの形式として正しいものだけを記録する。"""
+    try:
+        validate_email(email)
+        logged_email = User.objects.normalize(email)
+    except ValidationError:
+        logged_email = ""
+    record(
+        AuditLog.Action.LOGIN_FAILURE,
+        actor_email=logged_email,
+        request=request,
+        detail={"reason": reason},
+    )
+
+
 class LoginView(APIView):
     authentication_classes = []
     throttle_classes = [LoginIpThrottle]
@@ -43,16 +63,19 @@ class LoginView(APIView):
 
         # ロック中は、正しいパスワードでもログインできない
         if wait := lockout.remaining_lock_seconds(email):
+            record_login_failure(request, email, "locked")
             raise locked_error(wait)
 
         user = authenticate(request, username=email, password=serializer.validated_data["password"])
         if user is None:  # パスワード違い・未登録・無効化済みのいずれも同じ扱い
+            record_login_failure(request, email, "invalid_credentials")
             if locked_for := lockout.record_failure(email):
                 raise locked_error(locked_for)
             raise InvalidCredentials()
 
         lockout.reset_failures(email)
         update_last_login(None, user)
+        record(AuditLog.Action.LOGIN_SUCCESS, actor=user, request=request)
         refresh = RefreshToken.for_user(user)
         response = Response(
             {"access": str(refresh.access_token), "user": UserSerializer(user).data}

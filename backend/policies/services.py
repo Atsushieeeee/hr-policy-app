@@ -11,6 +11,9 @@ from django.db.models import Q
 from django.utils import timezone
 from pypdf import PdfReader
 
+from audit.models import AuditLog
+from audit.services import record
+
 from .exceptions import FileTooLarge, InvalidFile, SameFile, UploadInProgress
 from .models import PolicyDocument
 from .text import build_policy_text, garbled_ratio, normalize_text
@@ -219,9 +222,22 @@ def process_policy(policy):
                 status=PolicyDocument.Status.PROCESSING
             )
         )
+        old_current = next((p for p in others if p.status == PolicyDocument.Status.READY), None)
         old_files = [p.file.name for p in others]
         PolicyDocument.objects.filter(id__in=[p.id for p in others]).delete()
     delete_files(old_files)
+    # 取り込みは、ワーカーが行うため、IPアドレスは記録しない。操作者は、アップロードした管理者
+    record(
+        AuditLog.Action.POLICY_REPLACE,
+        actor=policy.uploaded_by,
+        target_type="policy",
+        target_id=policy.id,
+        detail={
+            "old_filename": old_current.original_filename if old_current else None,
+            "new_filename": policy.original_filename,
+            "page_count": policy.page_count,
+        },
+    )
 
 
 def _mark_failed(policy, code, message):
