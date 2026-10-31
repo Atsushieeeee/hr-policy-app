@@ -2,12 +2,27 @@ from django.db.models import Q
 from rest_framework import status
 from rest_framework.response import Response
 
+from audit.models import AuditLog
+from audit.services import record
 from core.pagination import StandardPagination
 from core.views import AdminAPIView
 
 from .admin_services import grant_admin, revoke_admin
 from .models import User
 from .serializers import AdminUserSerializer, UserIdsSerializer
+
+
+def record_admin_change(request, action, users):
+    """権限が実際に変わったユーザーごとに、記録する。"""
+    for user in users:
+        record(
+            action,
+            actor=request.user,
+            request=request,
+            target_type="user",
+            target_id=user.id,
+            detail={"email": user.email},
+        )
 
 
 class UserListView(AdminAPIView):
@@ -31,7 +46,8 @@ class AdminListView(UserListView):
     def post(self, request):
         serializer = UserIdsSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        grant_admin(serializer.validated_data["user_ids"])
+        changed = grant_admin(serializer.validated_data["user_ids"])
+        record_admin_change(request, AuditLog.Action.ADMIN_GRANT, changed)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -39,7 +55,8 @@ class AdminRevokeView(AdminAPIView):
     def post(self, request):
         serializer = UserIdsSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        revoke_admin(request.user.id, serializer.validated_data["user_ids"])
+        changed = revoke_admin(request.user.id, serializer.validated_data["user_ids"])
+        record_admin_change(request, AuditLog.Action.ADMIN_REVOKE, changed)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
