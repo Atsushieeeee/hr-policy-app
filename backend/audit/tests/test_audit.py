@@ -265,3 +265,75 @@ class TestUsersImport:
             call_command("import_users", path, atomic=True)
 
         assert logs(Action.USERS_IMPORT) == []
+
+
+class TestAuditLogApi:
+    URL = "/api/v1/admin/audit-logs"
+
+    def test_requires_admin(self):
+        assert api().get(self.URL).status_code == 401
+        assert api(make_user("normal")).get(self.URL).status_code == 403
+        assert api(make_user("admin", is_admin=True)).get(self.URL).status_code == 200
+
+    def test_lists_newest_first_with_fields(self):
+        admin = make_user("admin", is_admin=True)
+        record(Action.LOGIN_FAILURE, actor_email="x@example.com")
+        record(
+            Action.ADMIN_GRANT,
+            actor=admin,
+            actor_email=admin.email,
+            target_type="user",
+            target_id=5,
+            detail={"email": "b@example.com"},
+        )
+
+        body = api(admin).get(self.URL).json()
+
+        assert body["count"] == 2
+        first, second = body["results"]
+        assert first["action"] == "admin.grant"
+        assert first["action_label"] == "管理者権限の付与"
+        assert first["actor_email"] == "admin@example.com"
+        assert first["actor_name"] == "admin"
+        assert first["target_type"] == "user"
+        assert first["target_id"] == "5"
+        assert first["detail"] == {"email": "b@example.com"}
+        assert second["action"] == "login.failure"
+        assert second["actor_name"] == ""
+
+    def test_includes_action_choices(self):
+        body = api(make_user("admin", is_admin=True)).get(self.URL).json()
+
+        assert {"value": "login.failure", "label": "ログイン失敗"} in body["actions"]
+        assert len(body["actions"]) == len(Action.choices)
+
+    def test_paginates(self):
+        admin = make_user("admin", is_admin=True)
+        for _ in range(3):
+            record(Action.LOGIN_FAILURE, actor_email="x@example.com")
+
+        body = api(admin).get(self.URL, {"page_size": 2, "page": 2}).json()
+
+        assert (body["count"], body["page"], body["page_size"]) == (3, 2, 2)
+        assert len(body["results"]) == 1
+
+    def test_filters_by_action(self):
+        admin = make_user("admin", is_admin=True)
+        record(Action.LOGIN_FAILURE, actor_email="x@example.com")
+        record(Action.LOGIN_SUCCESS, actor=admin, actor_email=admin.email)
+
+        body = api(admin).get(self.URL, {"action": "login.success"}).json()
+
+        assert [r["action"] for r in body["results"]] == ["login.success"]
+
+    def test_invalid_action_gets_400(self):
+        response = api(make_user("admin", is_admin=True)).get(self.URL, {"action": "nope"})
+
+        assert response.status_code == 400
+        assert response.json()["error"]["code"] == "VALIDATION_ERROR"
+
+    def test_is_read_only(self):
+        client = api(make_user("admin", is_admin=True))
+
+        for method in (client.post, client.put, client.patch, client.delete):
+            assert method(self.URL).status_code == 405
