@@ -289,6 +289,7 @@ docker compose exec backend python manage.py import_users /samples/users.csv --o
 | GET | /api/v1/admin/users | 管理者権限のない、有効なユーザーの一覧（ページング。`?q=` で名前・メールを部分一致で検索） |
 | POST | /api/v1/admin/admins | `{"user_ids": [...]}` の全員に、管理者権限を付与する（`204`） |
 | POST | /api/v1/admin/admins/revoke | `{"user_ids": [...]}` の全員から、管理者権限を外す（`204`） |
+| GET | /api/v1/admin/audit-logs | 監査ログの一覧（新しい順、ページング）。`?action=` で操作の種類を絞り込む（不正な値は `400`）。応答の `actions` に、操作の種類の一覧（値と表示名）を含む |
 
 - ページングは、`?page=1&page_size=20`（最大100）。`{ "count", "page", "page_size", "results": [{ "id", "name", "email", "created_at" }] }` の形で返します。
 - 付与・解除は、全員成功か、全員失敗です。存在しない・無効なユーザーが含まれると `400`（`INVALID_TARGET`）です。
