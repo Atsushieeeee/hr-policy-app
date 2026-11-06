@@ -27,6 +27,10 @@ class AuditLog(models.Model):
         ADMIN_GRANT = "admin.grant", "管理者権限の付与"
         ADMIN_REVOKE = "admin.revoke", "管理者権限の解除"
         USERS_IMPORT = "users.import", "ユーザーのCSV取込"
+        FAQ_CREATE = "faq.create", "FAQの登録"
+        FAQ_PUBLISH = "faq.publish", "FAQの公開"
+        FAQ_DELETE = "faq.delete", "FAQの削除"
+        FAQ_NEEDS_REVIEW = "faq.needs_review", "FAQを要確認にした"
 
     # 操作したユーザー。ログイン失敗や、コマンドの実行では空
     actor = models.ForeignKey(

@@ -1,5 +1,7 @@
 import math
 
+from django.core.exceptions import PermissionDenied
+from django.http import Http404
 from rest_framework import exceptions
 from rest_framework.views import exception_handler
 
@@ -54,6 +56,11 @@ def _code_and_message(exc):
 
 def api_exception_handler(exc, context):
     """すべてのエラーを { "error": { "code", "message" } } の形に統一する。"""
+    # get_object_or_404 などが投げる、Django の例外も、同じ形にそろえる
+    if isinstance(exc, Http404):
+        exc = exceptions.NotFound()
+    elif isinstance(exc, PermissionDenied):
+        exc = exceptions.PermissionDenied()
     response = exception_handler(exc, context)
     if response is None:
         return None

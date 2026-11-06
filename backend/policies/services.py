@@ -13,6 +13,7 @@ from pypdf import PdfReader
 
 from audit.models import AuditLog
 from audit.services import record
+from faq.services import mark_published_for_review
 
 from .exceptions import FileTooLarge, InvalidFile, SameFile, UploadInProgress
 from .models import PolicyDocument
@@ -225,6 +226,8 @@ def process_policy(policy):
         old_current = next((p for p in others if p.status == PolicyDocument.Status.READY), None)
         old_files = [p.file.name for p in others]
         PolicyDocument.objects.filter(id__in=[p.id for p in others]).delete()
+        # 公開中のFAQは、古い規程の回答のため、確認が終わるまで、社員には見せない
+        reviewed = mark_published_for_review()
     delete_files(old_files)
     # 取り込みは、ワーカーが行うため、IPアドレスは記録しない。操作者は、アップロードした管理者
     record(
@@ -238,6 +241,14 @@ def process_policy(policy):
             "page_count": policy.page_count,
         },
     )
+    if reviewed:
+        record(
+            AuditLog.Action.FAQ_NEEDS_REVIEW,
+            actor=policy.uploaded_by,
+            target_type="policy",
+            target_id=policy.id,
+            detail={"count": reviewed},
+        )
 
 
 def _mark_failed(policy, code, message):
