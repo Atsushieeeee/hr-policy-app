@@ -333,6 +333,21 @@ docker compose exec backend python manage.py import_users /samples/users.csv --o
 - 付与・解除は、全員成功か、全員失敗です。存在しない・無効なユーザーが含まれると `400`（`INVALID_TARGET`）です。
 - 解除では、自分自身を含むと `409`（`CANNOT_REVOKE_SELF`）、処理後に有効な管理者が0人になると `409`（`LAST_ADMIN`）です。管理者の行をロックして判定するため、同時に解除しても、0人にはなりません。
 
+### FAQの管理API
+管理者が、よくある質問と回答を、登録・公開するためのAPIです（公開したものを社員に見せる画面とAPIは、このあと追加します）。
+
+| メソッド | パス | 内容 |
+|---|---|---|
+| GET | /api/v1/admin/faqs | FAQの一覧（全状態、並び順どおり、ページング）。`?status=` で、`draft` / `published` / `needs_review` に絞り込む（不正な値は `400`） |
+| POST | /api/v1/admin/faqs | 登録（`201`）。`question`（1000文字まで）と `answer` が必須。`source_message_id`（チャットの回答）を指定すると、その根拠を引き継ぐ。指定しなければ、`sources` を直接送れる。状態は、下書きで始まり、並び順は、末尾になる |
+| PATCH | /api/v1/admin/faqs/{id} | 編集（`question`、`answer`、`sort_order`、`status`（`draft` か `published`））。存在しないIDは `404` |
+| DELETE | /api/v1/admin/faqs/{id} | 削除（`204`） |
+| POST | /api/v1/admin/faqs/publish-reviewed | 「要確認」のFAQを、すべて公開に戻す。変えた件数（`count`）を返す |
+
+- 規程を置き換えると、公開中のFAQは、すべて「要確認」になります（古い規程の回答を、社員に見せないため）。内容を確認して、公開に戻してください。置き換えに失敗したときは、変わりません。
+- 登録時の規程の情報（`policy_snapshot`）と、元になったチャット（`source_message_id`）が、記録されます。
+- FAQの登録、公開、削除と、規程の置き換えによる「要確認」への変更は、監査ログに記録されます。
+
 ### 認証API
 - ログインすると、アクセストークン（15分）がレスポンスで返り、リフレッシュトークン（7日）は HttpOnly の Cookie に入ります。
 - 認証が必要なAPIには、アクセストークンを `X-Access-Token` ヘッダで送ります（公開時にBasic認証を前段に置いても干渉しないよう、`Authorization` ヘッダは使いません）。

@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     "policies",
     "rag",
     "audit",
+    "faq",
 ]
 
 MIDDLEWARE = [

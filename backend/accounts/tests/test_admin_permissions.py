@@ -1,3 +1,5 @@
+import re
+
 import pytest
 from rest_framework_simplejwt.tokens import AccessToken
 
@@ -115,7 +117,8 @@ class TestEveryAdminEndpointIsProtected:
         assert HasAdminPermission in view_class.permission_classes
 
     def test_permission_matrix(self, client, admin_user, normal_user, path, view_class, method):
-        url = f"/api/v1/admin/{path}"
+        # パスに、<int:pk> のような部分があれば、実在しうる値（1）に置き換える
+        url = "/api/v1/admin/" + re.sub(r"<[^>]+>", "1", path)
         call = getattr(client, method)
 
         unauthenticated = call(url)
