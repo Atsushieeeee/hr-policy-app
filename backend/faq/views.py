@@ -9,7 +9,13 @@ from core.views import AdminAPIView
 
 from .models import FAQ
 from .serializers import FAQCreateSerializer, FAQSerializer, FAQUpdateSerializer
-from .services import current_policy_snapshot, next_sort_order, publish_reviewed
+from .services import (
+    candidate_details,
+    candidate_groups,
+    current_policy_snapshot,
+    next_sort_order,
+    publish_reviewed,
+)
 
 
 def record_faq(request, action, faq, detail=None):
@@ -21,6 +27,19 @@ def record_faq(request, action, faq, detail=None):
         target_id=faq.id,
         detail={"question": faq.question, **(detail or {})},
     )
+
+
+class FAQCandidateListView(AdminAPIView):
+    """FAQにする候補（よく聞かれている質問）の一覧。?include_registered=true で、登録済みも含める。
+
+    質問者を特定できる情報（名前、メールアドレス、ユーザーID）は、返さない。
+    """
+
+    def get(self, request):
+        include_registered = request.query_params.get("include_registered") == "true"
+        paginator = StandardPagination()
+        page = paginator.paginate_queryset(candidate_groups(include_registered), request)
+        return paginator.get_paginated_response(candidate_details(page))
 
 
 class FAQListView(AdminAPIView):

@@ -343,6 +343,7 @@ docker compose exec backend python manage.py import_users /samples/users.csv --o
 | PATCH | /api/v1/admin/faqs/{id} | 編集（`question`、`answer`、`sort_order`、`status`（`draft` か `published`））。存在しないIDは `404` |
 | DELETE | /api/v1/admin/faqs/{id} | 削除（`204`） |
 | POST | /api/v1/admin/faqs/publish-reviewed | 「要確認」のFAQを、すべて公開に戻す。変えた件数（`count`）を返す |
+| GET | /api/v1/admin/faq-candidates | FAQにする候補（よく聞かれている質問）の一覧（ページング）。正規化した質問ごとにまとめ、聞かれた回数（`ask_count`）の多い順。聞いた人数（`user_count`）、最新の根拠つきの回答（`answer`、`sources`）、元のチャット（`source_message_id`）を返す。「該当なし」と根拠のない回答だけの質問は、含めない。登録済みは除外する（`?include_registered=true` で含め、`registered` で区別）。質問者を特定できる情報は、返さない |
 
 - 規程を置き換えると、公開中のFAQは、すべて「要確認」になります（古い規程の回答を、社員に見せないため）。内容を確認して、公開に戻してください。置き換えに失敗したときは、変わりません。
 - 登録時の規程の情報（`policy_snapshot`）と、元になったチャット（`source_message_id`）が、記録されます。
