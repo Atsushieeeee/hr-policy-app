@@ -7,6 +7,7 @@ const { mdAndUp } = useDisplay()
 const items = [
   { title: '就業規則', to: '/admin/upload', icon: 'mdi-file-document-outline' },
   { title: '管理者一覧', to: '/admin/list', icon: 'mdi-account-key-outline' },
+  { title: 'FAQ', to: '/admin/faq', icon: 'mdi-help-circle-outline' },
   { title: '監査ログ', to: '/admin/audit-logs', icon: 'mdi-history' },
 ]
 </script>
