@@ -43,13 +43,17 @@ const DETAIL_LABELS: Record<string, string> = {
   created: '作成',
   skipped: 'スキップ',
   errors: 'エラー',
+  question: '質問',
+  count: '件数',
+  reviewed: '要確認から',
 }
 
 const detailValue = (key: string, value: unknown): string => {
   if (key === 'reason') return LOGIN_FAILURE_REASONS[str(value)] ?? str(value)
   if (key === 'old_filename' && !value) return 'なし（新規登録）'
   if (key === 'page_count') return `${str(value)}ページ`
-  if (['created', 'skipped', 'errors'].includes(key)) return `${str(value)}件`
+  if (key === 'reviewed') return value ? 'はい' : 'いいえ'
+  if (['created', 'skipped', 'errors', 'count'].includes(key)) return `${str(value)}件`
   return str(value) || '—'
 }
 
@@ -78,6 +82,13 @@ const formatDetail = ({ action, detail: d }: AuditLog): string => {
       return `${str(d.old_filename) || '新規登録'} → ${str(d.new_filename)}（${str(d.page_count)}ページ）`
     case 'users.import':
       return `${str(d.filename)}（作成${str(d.created)}件、スキップ${str(d.skipped)}件、エラー${str(d.errors)}件）`
+    case 'faq.create':
+    case 'faq.publish':
+    case 'faq.delete':
+      // 要確認のFAQをまとめて公開に戻したときは、質問がなく、件数だけが入る
+      return d.question ? str(d.question) : `要確認の${str(d.count)}件を公開に戻した`
+    case 'faq.needs_review':
+      return `${str(d.count)}件を要確認にした（規程の置き換え）`
     default:
       return Object.entries(d).map(([k, v]) => `${k}=${str(v)}`).join(', ') || '—'
   }

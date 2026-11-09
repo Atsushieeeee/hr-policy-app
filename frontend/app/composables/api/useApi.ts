@@ -140,6 +140,17 @@ export const useApi = () => {
       body: JSON.stringify(body),
     })
 
+  const patch = <T>(path: string, body: unknown, init: RequestOptions = {}): Promise<T> =>
+    request<T>(path, {
+      ...init,
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...init.headers },
+      body: JSON.stringify(body),
+    })
+
+  const del = (path: string, init: RequestOptions = {}): Promise<null> =>
+    request<null>(path, { ...init, method: 'DELETE' })
+
   // ファイル（multipart）を送る。Content-Type は付けない（ブラウザが境界つきで設定する）
   const upload = <T>(path: string, form: FormData, init: RequestOptions = {}): Promise<T> =>
     request<T>(path, { timeoutMs: UPLOAD_TIMEOUT_MS, ...init, method: 'PUT', body: form })
@@ -148,5 +159,5 @@ export const useApi = () => {
   const getBlob = (path: string, init: RequestOptions = {}): Promise<Blob> =>
     request<Blob>(path, { ...init, responseType: 'blob' })
 
-  return { request, post, upload, getBlob }
+  return { request, post, patch, del, upload, getBlob }
 }
