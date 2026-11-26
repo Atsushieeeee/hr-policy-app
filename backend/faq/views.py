@@ -1,6 +1,9 @@
+from django.db.models import F
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers, status
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from audit.models import AuditLog
 from audit.services import record
@@ -8,7 +11,13 @@ from core.pagination import StandardPagination
 from core.views import AdminAPIView
 
 from .models import FAQ
-from .serializers import FAQCreateSerializer, FAQSerializer, FAQUpdateSerializer
+from .serializers import (
+    FAQCreateSerializer,
+    FAQSerializer,
+    FAQUpdateSerializer,
+    PublicFAQListSerializer,
+    PublicFAQSerializer,
+)
 from .services import (
     candidate_details,
     candidate_groups,
@@ -109,3 +118,28 @@ class FAQPublishReviewedView(AdminAPIView):
                 detail={"count": count, "reviewed": True},
             )
         return Response({"count": count})
+
+
+class PublicFAQListView(APIView):
+    """公開中のFAQの一覧（質問だけ、並び順どおり）。ログイン済みなら、管理者権限の有無に関わらず使える。"""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        faqs = FAQ.objects.filter(status=FAQ.Status.PUBLISHED)
+        return Response(PublicFAQListSerializer(faqs, many=True).data)
+
+
+class PublicFAQDetailView(APIView):
+    """公開中のFAQの質問・回答・根拠。AIは呼ばない。開くたびに、表示回数を増やす。
+
+    公開していないFAQは、存在しない場合と同じく404にする（存在を知らせない）。
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        faq = get_object_or_404(FAQ, pk=pk, status=FAQ.Status.PUBLISHED)
+        # 同時に開かれても数え落とさないよう、DB側で加算する
+        FAQ.objects.filter(pk=faq.pk).update(view_count=F("view_count") + 1)
+        return Response(PublicFAQSerializer(faq).data)
