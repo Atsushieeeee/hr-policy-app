@@ -67,3 +67,21 @@ class FAQUpdateSerializer(serializers.Serializer):
         choices=[FAQ.Status.DRAFT, FAQ.Status.PUBLISHED], required=False
     )
     sort_order = serializers.IntegerField(min_value=0, required=False)
+
+
+class PublicFAQListSerializer(serializers.ModelSerializer):
+    """社員に出す、FAQの一覧。回答は含めない。"""
+
+    class Meta:
+        model = FAQ
+        fields = ["id", "question"]
+        read_only_fields = fields
+
+
+class PublicFAQSerializer(serializers.ModelSerializer):
+    """社員に出す、FAQの詳細。状態や作成者など、内部の情報は含めない。"""
+
+    class Meta:
+        model = FAQ
+        fields = ["id", "question", "answer", "sources"]
+        read_only_fields = fields

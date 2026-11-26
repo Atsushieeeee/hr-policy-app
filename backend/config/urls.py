@@ -3,7 +3,14 @@ from django.urls import include, path
 from accounts.admin_views import AdminListView, AdminRevokeView, CandidateListView
 from audit.views import AuditLogListView
 from core.views import AdminPingView
-from faq.views import FAQCandidateListView, FAQDetailView, FAQListView, FAQPublishReviewedView
+from faq.views import (
+    FAQCandidateListView,
+    FAQDetailView,
+    FAQListView,
+    FAQPublishReviewedView,
+    PublicFAQDetailView,
+    PublicFAQListView,
+)
 from policies.views import PolicyFileForUsersView, PolicyFileView, PolicyStatusView, PolicyView
 
 # /api/v1/admin/ 配下の管理者用API。ここに登録したものは、権限のテストが自動で検証する
@@ -32,6 +39,8 @@ urlpatterns = [
     path("api/v1/", include("core.urls")),
     path("api/v1/", include("chat.urls")),
     path("api/v1/", include("accounts.urls")),
+    path("api/v1/faqs", PublicFAQListView.as_view(), name="faqs"),
+    path("api/v1/faqs/<int:pk>", PublicFAQDetailView.as_view(), name="faq-detail"),
     path("api/v1/policy/status", PolicyStatusView.as_view(), name="policy-status"),
     path("api/v1/policy/file", PolicyFileForUsersView.as_view(), name="policy-file"),
     path("api/v1/admin/", include(admin_urlpatterns)),
