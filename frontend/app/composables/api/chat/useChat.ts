@@ -13,6 +13,8 @@ export type ChatMessage = {
   // 回答だけに付く（質問では null）。false は「規程に該当する記載なし」
   found: boolean | null
   sources: ChatSource[]
+  // FAQの回答（AIの回答ではない）。サーバーには保存されない
+  fromFaq?: boolean
 }
 
 // 画面に表示するエラー。サーバーのコードごとに、見出しを分ける
@@ -157,6 +159,14 @@ export const useChat = () => {
     }
   }
 
+  // FAQの質問と回答を、会話に表示する。AIは呼ばず、サーバーにも保存しない（画面を開き直すと消える）
+  const showFaq = (question: string, answer: string, sources: ChatSource[]) => {
+    messages.value.push(
+      { key: `local-${++localSequence}`, role: 'user', content: question, found: null, sources: [] },
+      { key: `local-${++localSequence}`, role: 'assistant', content: answer, found: true, sources, fromFaq: true },
+    )
+  }
+
   // 失敗した質問を、もう一度送る
   const retry = async (): Promise<AskResult> => {
     if (failedQuestion === null || sending.value) return 'error'
@@ -180,5 +190,5 @@ export const useChat = () => {
     }
   }
 
-  return { messages, loading, loadError, sending, error, load, ask, retry, startNew }
+  return { messages, loading, loadError, sending, error, load, ask, retry, startNew, showFaq }
 }
