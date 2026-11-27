@@ -7,6 +7,7 @@ defineEmits<{ 'open-source': [source: ChatSource] }>()
 
 <template>
   <div>
+    <v-chip v-if="message.fromFaq" size="x-small" color="primary" variant="tonal" class="mb-1">FAQより</v-chip>
     <v-alert :type="message.found ? 'info' : 'warning'" variant="tonal" class="text-pre-wrap">
       {{ message.content }}
     </v-alert>
@@ -24,7 +25,10 @@ defineEmits<{ 'open-source': [source: ChatSource] }>()
       </v-chip>
     </div>
     <div class="text-caption text-medium-emphasis mt-2">
-      本回答は就業規則の記載に基づく案内です。最終的な判断は人事担当にご確認ください。
+      <template v-if="message.fromFaq">
+        管理者が確認したFAQの回答です。最終的な判断は人事担当にご確認ください。
+      </template>
+      <template v-else>本回答は就業規則の記載に基づく案内です。最終的な判断は人事担当にご確認ください。</template>
     </div>
   </div>
 </template>

@@ -1,7 +1,11 @@
 <script setup lang="ts">
+import { ApiError } from '~/composables/api/useApi'
+import type { PublicFaq } from '~/composables/api/chat/usePublicFaqs'
+
 const auth = useAuthStore()
 const notification = useNotificationStore()
-const { messages, loading, loadError, sending, error, load, ask, retry, startNew } = useChat()
+const { messages, loading, loadError, sending, error, load, ask, retry, startNew, showFaq } = useChat()
+const faqs = usePublicFaqs()
 const { registered, error: statusError, loading: checking, check, markNotRegistered } = usePolicyStatus()
 const {
   url: pdfUrl,
@@ -17,6 +21,7 @@ const selectedSource = ref<ChatSource | null>(null)
 onMounted(() => {
   check()
   load()
+  faqs.load()
 })
 onBeforeUnmount(releasePdf)
 
@@ -52,6 +57,29 @@ const openSource = (source: ChatSource) => {
   loadPdf()
 }
 
+// FAQを選んだとき。回答を取得して、会話に表示する（AIは呼ばない）
+const faqOpen = ref(false)
+const faqBusy = ref(false)
+const selectFaq = async (faq: PublicFaq) => {
+  if (faqBusy.value) return
+  faqBusy.value = true
+  try {
+    const detail = await faqs.fetchDetail(faq.id)
+    showFaq(detail.question, detail.answer, detail.sources.map(({ article, page }) => ({ article, page })))
+    faqOpen.value = false
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 404) {
+      // 選ぶ前に、非公開になった
+      notification.show('このFAQは、公開が終了しました', 'error')
+      await faqs.load()
+    } else {
+      notification.show(e instanceof ApiError ? e.message : '予期しないエラーが発生しました', 'error')
+    }
+  } finally {
+    faqBusy.value = false
+  }
+}
+
 const onStartNew = async () => {
   const failure = await startNew()
   if (failure) notification.show(failure, 'error')
@@ -63,14 +91,25 @@ const onStartNew = async () => {
     <div class="chat__header">
       <div class="chat__header-inner">
         <div class="text-h6">就業規則について質問する</div>
-        <v-btn
-          variant="text"
-          prepend-icon="mdi-plus"
-          :disabled="messages.length === 0 || sending || loading"
-          @click="onStartNew"
-        >
-          新しい会話
-        </v-btn>
+        <div>
+          <v-btn
+            v-if="faqs.items.value.length"
+            variant="text"
+            prepend-icon="mdi-help-circle-outline"
+            :disabled="loading"
+            @click="faqOpen = true"
+          >
+            よくある質問
+          </v-btn>
+          <v-btn
+            variant="text"
+            prepend-icon="mdi-plus"
+            :disabled="messages.length === 0 || sending || loading"
+            @click="onStartNew"
+          >
+            新しい会話
+          </v-btn>
+        </div>
       </div>
     </div>
 
@@ -95,9 +134,19 @@ const onStartNew = async () => {
       @open-source="openSource"
     />
 
-    <div v-else class="text-center text-medium-emphasis pa-4">
-      就業規則の内容について、質問してください。<br>
-      回答は、登録されている就業規則に基づきます。
+    <div v-else class="chat__empty">
+      <div class="text-center text-medium-emphasis pa-4">
+        就業規則の内容について、質問してください。<br>
+        回答は、登録されている就業規則に基づきます。
+      </div>
+      <ChatFaqList
+        :items="faqs.items.value"
+        :loading="faqs.loading.value"
+        :error="faqs.error.value"
+        :busy="faqBusy"
+        @select="selectFaq"
+        @retry="faqs.load"
+      />
     </div>
 
     <div class="chat__input">
@@ -114,6 +163,16 @@ const onStartNew = async () => {
 
       <ChatMessageInput v-model="question" :disabled :sending @send="send" />
     </div>
+
+    <ChatFaqDialog
+      v-model="faqOpen"
+      :items="faqs.items.value"
+      :loading="faqs.loading.value"
+      :error="faqs.error.value"
+      :busy="faqBusy"
+      @select="selectFaq"
+      @retry="faqs.load"
+    />
 
     <ChatSourceDialog
       v-model="sourceOpen"
@@ -139,6 +198,7 @@ const onStartNew = async () => {
 }
 
 .chat__header,
+.chat__empty,
 .chat__input,
 .chat__notice {
   width: 100%;
@@ -154,6 +214,7 @@ const onStartNew = async () => {
 
 .chat__header-inner {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
 }
